@@ -1,0 +1,5 @@
+{
+  "buildCommand": "pnpm --filter @workspace/partypulse build",
+  "outputDirectory": "artifacts/partypulse/dist",
+  "installCommand": "pnpm install"
+}
