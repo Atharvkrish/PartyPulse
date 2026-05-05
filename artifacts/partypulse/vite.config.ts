@@ -2,37 +2,22 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
-import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 import { VitePWA } from "vite-plugin-pwa";
 
+const isReplit = !!process.env.REPL_ID;
+
+// PORT and BASE_PATH are only required in Replit dev mode
 const rawPort = process.env.PORT;
+const port = rawPort ? Number(rawPort) : 3000;
 
-if (!rawPort) {
-  throw new Error(
-    "PORT environment variable is required but was not provided.",
-  );
-}
-
-const port = Number(rawPort);
-
-if (Number.isNaN(port) || port <= 0) {
-  throw new Error(`Invalid PORT value: "${rawPort}"`);
-}
-
-const basePath = process.env.BASE_PATH;
-
-if (!basePath) {
-  throw new Error(
-    "BASE_PATH environment variable is required but was not provided.",
-  );
-}
+// Default base to "/" for Vercel / Firebase Hosting production builds
+const basePath = process.env.BASE_PATH ?? "/";
 
 export default defineConfig({
   base: basePath,
   plugins: [
     react(),
     tailwindcss(),
-    runtimeErrorOverlay(),
     VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "apple-touch-icon.png"],
@@ -41,7 +26,7 @@ export default defineConfig({
         short_name: "PartyPulse",
         description: "Discover and create events near you",
         theme_color: "#7c3aed",
-        background_color: "#ffffff",
+        background_color: "#111111",
         display: "standalone",
         icons: [
           { src: "/pwa-192x192.png", sizes: "192x192", type: "image/png" },
@@ -49,16 +34,19 @@ export default defineConfig({
         ],
       },
     }),
-    ...(process.env.NODE_ENV !== "production" &&
-    process.env.REPL_ID !== undefined
+    // Replit-only dev plugins — skipped on Vercel / CI
+    ...(isReplit && process.env.NODE_ENV !== "production"
       ? [
+          await import("@replit/vite-plugin-runtime-error-modal").then((m) =>
+            m.default()
+          ),
           await import("@replit/vite-plugin-cartographer").then((m) =>
             m.cartographer({
               root: path.resolve(import.meta.dirname, ".."),
-            }),
+            })
           ),
           await import("@replit/vite-plugin-dev-banner").then((m) =>
-            m.devBanner(),
+            m.devBanner()
           ),
         ]
       : []),
