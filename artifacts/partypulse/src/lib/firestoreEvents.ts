@@ -103,6 +103,13 @@ export async function deleteEvent(eventId: string) {
   await deleteDoc(doc(db, "events", eventId));
 }
 
+export async function updateEvent(
+  eventId: string,
+  updates: Partial<Pick<Event, "title" | "description" | "date" | "time" | "maxAttendees" | "location">>
+) {
+  await updateDoc(doc(db, "events", eventId), updates);
+}
+
 export async function banUser(eventId: string, userId: string) {
   await updateDoc(doc(db, "events", eventId), {
     bannedUsers: arrayUnion(userId),

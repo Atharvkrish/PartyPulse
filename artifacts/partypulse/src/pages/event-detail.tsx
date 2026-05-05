@@ -281,13 +281,22 @@ export default function EventDetail() {
             {isCreator && (
               <div className="bg-card border border-border rounded-xl p-4 space-y-4">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Admin Controls</p>
-                <button
-                  data-testid="button-delete-event"
-                  onClick={handleDeleteEvent}
-                  className="w-full py-2 text-sm font-medium text-destructive border border-destructive/50 rounded-lg hover:bg-destructive/10 transition-colors"
-                >
-                  Delete Event
-                </button>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    data-testid="button-edit-event"
+                    onClick={() => setLocation(`/events/${event.id}/edit`)}
+                    className="py-2 text-sm font-medium text-primary border border-primary/50 rounded-lg hover:bg-primary/10 transition-colors"
+                  >
+                    Edit Event
+                  </button>
+                  <button
+                    data-testid="button-delete-event"
+                    onClick={handleDeleteEvent}
+                    className="py-2 text-sm font-medium text-destructive border border-destructive/50 rounded-lg hover:bg-destructive/10 transition-colors"
+                  >
+                    Delete Event
+                  </button>
+                </div>
                 {event.going.length > 0 && (
                   <div>
                     <p className="text-xs font-medium text-muted-foreground mb-2">Attendees</p>
@@ -429,10 +438,20 @@ export default function EventDetail() {
                       {canDelete && (
                         <button
                           data-testid={`button-delete-photo-${photo.id}`}
-                          onClick={() => deletePhoto(event.id, photo.id, photo.storagePath)}
-                          className="absolute top-1 right-1 bg-background/70 backdrop-blur-sm text-destructive rounded-full w-6 h-6 text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                          onClick={() => {
+                            if (confirm("Delete this photo?")) {
+                              deletePhoto(event.id, photo.id, photo.storagePath);
+                            }
+                          }}
+                          className="absolute top-1 right-1 bg-background/80 backdrop-blur-sm border border-border text-destructive rounded-full w-7 h-7 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center hover:bg-destructive hover:text-white"
+                          title="Delete photo"
                         >
-                          x
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="3 6 5 6 21 6" />
+                            <path d="M19 6l-1 14H6L5 6" />
+                            <path d="M10 11v6M14 11v6" />
+                            <path d="M9 6V4h6v2" />
+                          </svg>
                         </button>
                       )}
                       <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/50 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">

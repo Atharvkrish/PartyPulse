@@ -11,6 +11,7 @@ import EventDetail from "@/pages/event-detail";
 import Profile from "@/pages/profile";
 import Feed from "@/pages/feed";
 import UserProfile from "@/pages/user-profile";
+import EditEvent from "@/pages/edit-event";
 
 const queryClient = new QueryClient();
 
@@ -48,6 +49,9 @@ function Router() {
       </Route>
       <Route path="/users/:id">
         {() => <ProtectedRoute component={UserProfile} />}
+      </Route>
+      <Route path="/events/:id/edit">
+        {() => <ProtectedRoute component={EditEvent} />}
       </Route>
       <Route component={NotFound} />
     </Switch>

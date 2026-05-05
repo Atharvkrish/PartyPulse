@@ -78,6 +78,8 @@
     "firebase": "^12.12.1",
     "leaflet": "^1.9.4",
     "react-leaflet": "^5.0.0",
-    "vite-plugin-pwa": "^1.2.0"
+    "vite-plugin-pwa": "^1.2.0",
+    "workbox-precaching": "^7.4.0",
+    "workbox-routing": "^7.4.0"
   }
 }
