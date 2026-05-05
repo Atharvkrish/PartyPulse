@@ -1,9 +1,10 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import { subscribeEvents, Event } from "@/lib/firestoreEvents";
 import { useAuth } from "@/contexts/AuthContext";
+import BottomNav from "@/components/BottomNav";
 
 import iconUrl from "leaflet/dist/images/marker-icon.png";
 import iconRetinaUrl from "leaflet/dist/images/marker-icon-2x.png";
@@ -39,7 +40,7 @@ function UserLocationButton() {
     <button
       data-testid="button-locate-me"
       onClick={handleLocate}
-      className="absolute bottom-28 right-4 z-[999] bg-card border border-border rounded-full w-10 h-10 flex items-center justify-center text-foreground shadow-md hover:bg-accent transition-colors"
+      className="absolute bottom-36 right-4 z-[999] bg-card border border-border rounded-full w-10 h-10 flex items-center justify-center text-foreground shadow-md hover:bg-accent transition-colors"
       title="My location"
     >
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -61,7 +62,9 @@ export default function Home() {
   }, []);
 
   const sortedEvents = [...events].sort(
-    (a, b) => new Date(a.date + "T" + a.time).getTime() - new Date(b.date + "T" + b.time).getTime()
+    (a, b) =>
+      new Date(a.date + "T" + a.time).getTime() -
+      new Date(b.date + "T" + b.time).getTime()
   );
 
   return (
@@ -71,13 +74,13 @@ export default function Home() {
           Party<span className="text-primary">Pulse</span>
         </span>
         <div className="flex items-center gap-2">
-          <button
-            data-testid="button-profile"
+          <div
+            data-testid="avatar-user"
             onClick={() => setLocation("/profile")}
-            className="w-8 h-8 rounded-full bg-primary/20 border border-primary flex items-center justify-center text-sm font-bold text-primary"
+            className="w-8 h-8 rounded-full bg-primary/20 border border-primary flex items-center justify-center text-sm font-bold text-primary cursor-pointer"
           >
             {(user?.displayName || user?.email || "?")[0].toUpperCase()}
-          </button>
+          </div>
         </div>
       </header>
 
@@ -116,14 +119,16 @@ export default function Home() {
           <UserLocationButton />
         </MapContainer>
 
+        {/* Create FAB — sits above bottom panel */}
         <button
           data-testid="button-create-event-fab"
           onClick={() => setLocation("/events/new")}
-          className="absolute bottom-4 right-4 z-[999] bg-primary text-primary-foreground rounded-full px-5 py-3 font-bold text-sm shadow-lg hover:opacity-90 transition-opacity"
+          className="absolute bottom-20 right-4 z-[999] bg-primary text-primary-foreground rounded-full px-5 py-3 font-bold text-sm shadow-lg hover:opacity-90 transition-opacity"
         >
           + Create Event
         </button>
 
+        {/* Slide-up events panel */}
         <div
           className="absolute bottom-0 left-0 right-0 z-[998] transition-transform duration-300"
           style={{ transform: panelOpen ? "translateY(0)" : "translateY(calc(100% - 48px))" }}
@@ -137,9 +142,11 @@ export default function Home() {
               <span className="w-8 h-1 rounded-full bg-border block" />
               <span className="text-xs font-medium">{events.length} Events Nearby</span>
             </button>
-            <div className="overflow-y-auto max-h-64 px-4 pb-4 space-y-2">
+            <div className="overflow-y-auto max-h-52 px-4 pb-4 space-y-2">
               {sortedEvents.length === 0 && (
-                <p className="text-center text-muted-foreground text-sm py-6">No events yet. Create one!</p>
+                <p className="text-center text-muted-foreground text-sm py-6">
+                  No events yet. Create one!
+                </p>
               )}
               {sortedEvents.map((event) => (
                 <div
@@ -154,7 +161,9 @@ export default function Home() {
                   />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-foreground truncate">{event.title}</p>
-                    <p className="text-xs text-muted-foreground">{event.date} &bull; {event.going.length} going</p>
+                    <p className="text-xs text-muted-foreground">
+                      {event.date} &bull; {event.going.length} going
+                    </p>
                   </div>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-muted-foreground flex-shrink-0">
                     <path d="M9 18l6-6-6-6" />
@@ -165,6 +174,8 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      <BottomNav />
     </div>
   );
 }

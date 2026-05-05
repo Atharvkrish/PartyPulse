@@ -12,6 +12,7 @@ import {
 } from "@/lib/firestoreEvents";
 import { subscribeMessages, sendMessage, deleteMessage, ChatMessage } from "@/lib/firestoreChat";
 import { subscribePhotos, uploadEventPhoto, deletePhoto, EventPhoto } from "@/lib/storagePhotos";
+import { logActivity } from "@/lib/firestoreActivity";
 import { useToast } from "@/hooks/use-toast";
 
 type Tab = "info" | "chat" | "gallery";
@@ -82,6 +83,16 @@ export default function EventDetail() {
     const prev = getUserRsvp();
     const next = prev === status ? null : status;
     await setRsvp(event.id, user.uid, next, prev);
+    if (next === "going" || next === "interested") {
+      logActivity({
+        actorId: user.uid,
+        actorName: user.displayName || user.email || "Someone",
+        type: "rsvped",
+        eventId: event.id,
+        eventTitle: event.title,
+        detail: next === "going" ? "Going" : "Interested",
+      }).catch(() => {});
+    }
   }
 
   async function handleSendMessage(e: React.FormEvent) {
@@ -122,6 +133,14 @@ export default function EventDetail() {
         setPhotoProgress
       );
       toast({ title: "Photo uploaded!" });
+      logActivity({
+        actorId: user.uid,
+        actorName: user.displayName || user.email || "Someone",
+        type: "uploaded_photos",
+        eventId: event.id,
+        eventTitle: event.title,
+        detail: "a photo",
+      }).catch(() => {});
     } catch {
       toast({ title: "Upload failed", variant: "destructive" });
     } finally {

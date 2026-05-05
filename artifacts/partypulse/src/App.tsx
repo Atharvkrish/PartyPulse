@@ -9,15 +9,21 @@ import Login from "@/pages/login";
 import CreateEvent from "@/pages/create-event";
 import EventDetail from "@/pages/event-detail";
 import Profile from "@/pages/profile";
+import Feed from "@/pages/feed";
+import UserProfile from "@/pages/user-profile";
 
 const queryClient = new QueryClient();
 
-function ProtectedRoute({ component: Component }: { component: any }) {
+function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { user, loading } = useAuth();
-  
-  if (loading) return <div className="min-h-screen bg-background flex items-center justify-center text-primary">Loading...</div>;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
   if (!user) return <Redirect to="/login" />;
-  
   return <Component />;
 }
 
@@ -28,6 +34,9 @@ function Router() {
       <Route path="/">
         {() => <ProtectedRoute component={Home} />}
       </Route>
+      <Route path="/feed">
+        {() => <ProtectedRoute component={Feed} />}
+      </Route>
       <Route path="/events/new">
         {() => <ProtectedRoute component={CreateEvent} />}
       </Route>
@@ -36,6 +45,9 @@ function Router() {
       </Route>
       <Route path="/profile">
         {() => <ProtectedRoute component={Profile} />}
+      </Route>
+      <Route path="/users/:id">
+        {() => <ProtectedRoute component={UserProfile} />}
       </Route>
       <Route component={NotFound} />
     </Switch>

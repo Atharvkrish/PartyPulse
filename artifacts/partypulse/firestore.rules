@@ -2,18 +2,48 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Users — public read, own write
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth != null && (
+        request.auth.uid == userId ||
+        // Allow friend list mutations from other authenticated users (for accept/unfriend)
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['friends'])
+      );
+    }
+
+    // Friend requests
+    match /friendRequests/{requestId} {
+      allow read: if request.auth != null && (
+        resource.data.fromId == request.auth.uid ||
+        resource.data.toId == request.auth.uid
+      );
+      allow create: if request.auth != null && request.resource.data.fromId == request.auth.uid;
+      allow update: if request.auth != null && (
+        resource.data.fromId == request.auth.uid ||
+        resource.data.toId == request.auth.uid
+      );
+    }
+
+    // Activities — authenticated read, own write
+    match /activities/{activityId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.actorId == request.auth.uid;
+      allow delete: if request.auth != null && resource.data.actorId == request.auth.uid;
+    }
+
     // Events
     match /events/{eventId} {
       allow read: if true;
       allow create: if request.auth != null;
       allow update: if request.auth != null && (
         resource.data.creatorId == request.auth.uid ||
-        // Only allow attendee fields to be updated by any auth user
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['going','interested','cantGo'])
       );
       allow delete: if request.auth != null && resource.data.creatorId == request.auth.uid;
 
-      // Chat messages subcollection
+      // Chat messages
       match /messages/{messageId} {
         allow read: if request.auth != null &&
           !get(/databases/$(database)/documents/events/$(eventId)).data.bannedUsers.hasAny([request.auth.uid]);
@@ -26,11 +56,10 @@ service cloud.firestore {
         );
       }
 
-      // Photos subcollection
+      // Photos
       match /photos/{photoId} {
         allow read: if request.auth != null;
-        allow create: if request.auth != null &&
-          request.resource.data.uploaderId == request.auth.uid;
+        allow create: if request.auth != null && request.resource.data.uploaderId == request.auth.uid;
         allow delete: if request.auth != null && (
           resource.data.uploaderId == request.auth.uid ||
           get(/databases/$(database)/documents/events/$(eventId)).data.creatorId == request.auth.uid

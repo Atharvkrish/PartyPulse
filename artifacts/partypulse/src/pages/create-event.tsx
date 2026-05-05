@@ -5,6 +5,7 @@ import L from "leaflet";
 import { useAuth } from "@/contexts/AuthContext";
 import { createEvent } from "@/lib/firestoreEvents";
 import { uploadEventCover } from "@/lib/storagePhotos";
+import { logActivity } from "@/lib/firestoreActivity";
 import { useToast } from "@/hooks/use-toast";
 
 import iconUrl from "leaflet/dist/images/marker-icon.png";
@@ -85,6 +86,13 @@ export default function CreateEvent() {
         creatorId: user.uid,
         creatorName: user.displayName || user.email || "Anonymous",
       });
+      logActivity({
+        actorId: user.uid,
+        actorName: user.displayName || user.email || "Someone",
+        type: "created_event",
+        eventId,
+        eventTitle: title,
+      }).catch(() => {});
       toast({ title: "Event created!" });
       setLocation(`/events/${eventId}`);
     } catch (err: unknown) {
