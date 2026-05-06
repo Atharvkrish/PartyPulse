@@ -34,13 +34,18 @@ See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and pa
 - **Tech stack**: Firebase v9 (Auth, Firestore, Storage) + Leaflet maps + Tailwind CSS
 - **Features**:
   - Email/password + phone OTP authentication
-  - Interactive Leaflet map showing event markers (red/yellow/green by RSVP count)
-  - Event creation with map location picker and image upload
+  - Interactive Leaflet map with emoji category markers (red/yellow/green by RSVP count)
+  - Event discovery: inline search bar, filter sheet (sort/date/category/distance/capacity), active filter chips
+  - Event creation + editing with category selector (10 categories with emoji), map location picker, image upload
   - RSVP system (Going / Interested / Can't Go) with max attendee limit enforcement
   - Real-time Firestore chat per event with ban controls
-  - Photo gallery with Firebase Storage upload per event
-  - Admin controls: delete event, ban/unban users from chat
-  - PWA-ready (vite-plugin-pwa)
+  - Photo gallery with Firebase Storage upload and delete confirmation per event
+  - Admin controls: edit event, delete event, ban/unban users from chat
+  - Push notifications via FCM (friend requests, new events, @mentions)
+  - Social feed, friend system, user profiles
+  - PWA-ready (vite-plugin-pwa, injectManifest + custom sw.ts)
+- **Filter logic**: `src/lib/eventFilters.ts` — pure client-side, Haversine distance, 10 categories
+- **Filter UI**: `src/components/EventFilterSheet.tsx` — bottom sheet, z-[9999]
 - **Firebase project**: `partypulse-dc24f`
 - **Deploy**: See `artifacts/partypulse/DEPLOY.md` for Firebase Hosting + Vercel instructions
 - **Security rules**: `artifacts/partypulse/firestore.rules`, `artifacts/partypulse/storage.rules`

@@ -4,6 +4,7 @@ import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-lea
 import L from "leaflet";
 import { useAuth } from "@/contexts/AuthContext";
 import { getEvent, updateEvent, Event } from "@/lib/firestoreEvents";
+import { CATEGORIES, CATEGORY_META } from "@/lib/eventFilters";
 import { useToast } from "@/hooks/use-toast";
 
 import iconUrl from "leaflet/dist/images/marker-icon.png";
@@ -40,6 +41,7 @@ export default function EditEvent() {
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [maxAttendees, setMaxAttendees] = useState("");
+  const [category, setCategory] = useState("");
   const [pickedLocation, setPickedLocation] = useState<LatLng | null>(null);
   const [address, setAddress] = useState("");
   const [loading, setLoading] = useState(false);
@@ -56,6 +58,7 @@ export default function EditEvent() {
       setDate(ev.date);
       setTime(ev.time);
       setMaxAttendees(ev.maxAttendees?.toString() ?? "");
+      setCategory(ev.category ?? "");
       setPickedLocation({ lat: ev.location.lat, lng: ev.location.lng });
       setAddress(ev.location.address);
       setFetching(false);
@@ -85,6 +88,7 @@ export default function EditEvent() {
         description,
         date,
         time,
+        category: category || undefined,
         location: { lat: pickedLocation.lat, lng: pickedLocation.lng, address },
         maxAttendees: maxAttendees ? parseInt(maxAttendees) : undefined,
       });
@@ -148,6 +152,31 @@ export default function EditEvent() {
               className={`${inputCls} resize-none`}
               placeholder="Tell people what to expect..."
             />
+          </div>
+
+          {/* Category */}
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-2">Category</label>
+            <div className="grid grid-cols-5 gap-2">
+              {CATEGORIES.map((cat) => {
+                const meta = CATEGORY_META[cat];
+                const active = category === cat;
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    data-testid={`cat-${cat}`}
+                    onClick={() => setCategory(active ? "" : cat)}
+                    className={`flex flex-col items-center gap-1 p-2 rounded-xl border text-xs font-medium transition-all ${
+                      active ? meta.active : "border-border text-muted-foreground hover:border-primary/40"
+                    }`}
+                  >
+                    <span className="text-base">{meta.emoji}</span>
+                    <span className="leading-tight text-center text-[10px]">{cat}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">

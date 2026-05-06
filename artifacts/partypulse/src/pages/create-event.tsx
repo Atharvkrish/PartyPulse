@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useLocation } from "wouter";
 import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
 import L from "leaflet";
@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { createEvent } from "@/lib/firestoreEvents";
 import { uploadEventCover } from "@/lib/storagePhotos";
 import { logActivity } from "@/lib/firestoreActivity";
+import { CATEGORIES, CATEGORY_META } from "@/lib/eventFilters";
 import { useToast } from "@/hooks/use-toast";
 
 import iconUrl from "leaflet/dist/images/marker-icon.png";
@@ -18,11 +19,12 @@ L.Icon.Default.mergeOptions({ iconUrl, iconRetinaUrl, shadowUrl });
 interface LatLng { lat: number; lng: number }
 
 function LocationPicker({ onPick }: { onPick: (ll: LatLng) => void }) {
-  useMapEvents({
-    click(e) { onPick({ lat: e.latlng.lat, lng: e.latlng.lng }); },
-  });
+  useMapEvents({ click(e) { onPick({ lat: e.latlng.lat, lng: e.latlng.lng }); } });
   return null;
 }
+
+const inputCls =
+  "w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary";
 
 export default function CreateEvent() {
   const { user } = useAuth();
@@ -34,6 +36,7 @@ export default function CreateEvent() {
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [maxAttendees, setMaxAttendees] = useState("");
+  const [category, setCategory] = useState("");
   const [pickedLocation, setPickedLocation] = useState<LatLng | null>(null);
   const [address, setAddress] = useState("");
   const [coverFile, setCoverFile] = useState<File | null>(null);
@@ -72,14 +75,13 @@ export default function CreateEvent() {
     try {
       const tempId = `temp_${Date.now()}`;
       let imageUrl = "";
-      if (coverFile) {
-        imageUrl = await uploadEventCover(tempId, coverFile, setUploadProgress);
-      }
+      if (coverFile) imageUrl = await uploadEventCover(tempId, coverFile, setUploadProgress);
       const eventId = await createEvent({
         title,
         description,
         date,
         time,
+        category: category || undefined,
         location: { lat: pickedLocation.lat, lng: pickedLocation.lng, address },
         imageUrl,
         maxAttendees: maxAttendees ? parseInt(maxAttendees) : undefined,
@@ -103,9 +105,9 @@ export default function CreateEvent() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="max-w-2xl mx-auto p-4">
-        <div className="flex items-center gap-3 mb-6 pt-4">
+    <div className="min-h-screen bg-background text-foreground pb-8">
+      <div className="max-w-2xl mx-auto px-4">
+        <div className="flex items-center gap-3 mb-6 pt-6">
           <button
             data-testid="button-back"
             onClick={() => setLocation("/")}
@@ -125,7 +127,7 @@ export default function CreateEvent() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
-              className="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              className={inputCls}
               placeholder="What's the event?"
             />
           </div>
@@ -137,9 +139,34 @@ export default function CreateEvent() {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              className="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+              className={`${inputCls} resize-none`}
               placeholder="Tell people what to expect..."
             />
+          </div>
+
+          {/* Category */}
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-2">Category</label>
+            <div className="grid grid-cols-5 gap-2">
+              {CATEGORIES.map((cat) => {
+                const meta = CATEGORY_META[cat];
+                const active = category === cat;
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    data-testid={`cat-${cat}`}
+                    onClick={() => setCategory(active ? "" : cat)}
+                    className={`flex flex-col items-center gap-1 p-2 rounded-xl border text-xs font-medium transition-all ${
+                      active ? meta.active : "border-border text-muted-foreground hover:border-primary/40"
+                    }`}
+                  >
+                    <span className="text-base">{meta.emoji}</span>
+                    <span className="leading-tight text-center text-[10px]">{cat}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -151,7 +178,7 @@ export default function CreateEvent() {
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
                 required
-                className="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                className={inputCls}
               />
             </div>
             <div>
@@ -162,7 +189,7 @@ export default function CreateEvent() {
                 value={time}
                 onChange={(e) => setTime(e.target.value)}
                 required
-                className="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                className={inputCls}
               />
             </div>
           </div>
@@ -175,7 +202,7 @@ export default function CreateEvent() {
               value={maxAttendees}
               onChange={(e) => setMaxAttendees(e.target.value)}
               min={1}
-              className="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              className={inputCls}
               placeholder="No limit"
             />
           </div>
@@ -185,26 +212,14 @@ export default function CreateEvent() {
               Location * <span className="text-primary">— click on the map</span>
             </label>
             <div className="rounded-xl overflow-hidden border border-border" style={{ height: 220 }}>
-              <MapContainer
-                center={[40.7128, -74.006]}
-                zoom={12}
-                style={{ height: "100%", width: "100%" }}
-                className="z-0"
-              >
-                <TileLayer
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                />
+              <MapContainer center={[40.7128, -74.006]} zoom={12} style={{ height: "100%", width: "100%" }}>
+                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                 <LocationPicker onPick={handlePickLocation} />
                 {pickedLocation && <Marker position={[pickedLocation.lat, pickedLocation.lng]} />}
               </MapContainer>
             </div>
-            {address && (
-              <p className="mt-1.5 text-xs text-muted-foreground truncate">{address}</p>
-            )}
-            {!pickedLocation && (
-              <p className="mt-1.5 text-xs text-muted-foreground">No location selected yet</p>
-            )}
+            {address && <p className="mt-1.5 text-xs text-muted-foreground truncate">📍 {address}</p>}
+            {!pickedLocation && <p className="mt-1.5 text-xs text-muted-foreground">No location selected yet</p>}
           </div>
 
           <div>
@@ -217,18 +232,11 @@ export default function CreateEvent() {
               className="w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary file:text-primary-foreground file:text-sm file:font-medium hover:file:opacity-90 cursor-pointer"
             />
             {coverPreview && (
-              <img
-                src={coverPreview}
-                alt="Cover preview"
-                className="mt-2 rounded-lg w-full h-32 object-cover border border-border"
-              />
+              <img src={coverPreview} alt="Cover preview" className="mt-2 rounded-lg w-full h-32 object-cover border border-border" />
             )}
             {loading && uploadProgress > 0 && uploadProgress < 100 && (
               <div className="mt-2 bg-border rounded-full h-1.5">
-                <div
-                  className="bg-primary h-1.5 rounded-full transition-all"
-                  style={{ width: `${uploadProgress}%` }}
-                />
+                <div className="bg-primary h-1.5 rounded-full transition-all" style={{ width: `${uploadProgress}%` }} />
               </div>
             )}
           </div>

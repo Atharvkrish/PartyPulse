@@ -29,6 +29,7 @@ export interface Event {
     lng: number;
     address: string;
   };
+  category?: string;
   imageUrl?: string;
   maxAttendees?: number;
   creatorId: string;
@@ -105,7 +106,7 @@ export async function deleteEvent(eventId: string) {
 
 export async function updateEvent(
   eventId: string,
-  updates: Partial<Pick<Event, "title" | "description" | "date" | "time" | "maxAttendees" | "location">>
+  updates: Partial<Pick<Event, "title" | "description" | "date" | "time" | "maxAttendees" | "location" | "category">>
 ) {
   await updateDoc(doc(db, "events", eventId), updates);
 }
