@@ -30,12 +30,12 @@ function getMarkerColor(going: number): string {
 
 function createColoredIcon(color: string, category?: string) {
   const emoji = category
-    ? CATEGORY_META[category as keyof typeof CATEGORY_META]?.emoji ?? "★"
-    : "★";
+    ? CATEGORY_META[category as keyof typeof CATEGORY_META]?.emoji ?? "🎉"
+    : "🎉";
   return L.divIcon({
     className: "",
-    html: `<div style="position:relative;width:32px;height:32px;display:flex;align-items:center;justify-content:center;">
-      <div style="width:28px;height:28px;border-radius:50%;background:${color};border:2.5px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;font-size:13px;line-height:1;">${emoji}</div>
+    html: `<div style="position:relative;width:34px;height:34px;display:flex;align-items:center;justify-content:center;">
+      <div style="width:30px;height:30px;border-radius:50%;background:${color};border:2.5px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;font-size:14px;line-height:1;">${emoji}</div>
     </div>`,
     iconSize: [32, 32],
     iconAnchor: [16, 16],

@@ -1,31 +1,75 @@
 import type { Event } from "./firestoreEvents";
 
+// ── 25 party-centric categories ──────────────────────────────────────────────
+// Stored in Firestore as the label string (e.g. "Regular Party").
+// Emoji is display-only and lives in CATEGORY_META.
+
 export const CATEGORIES = [
-  "Party",
-  "Concert",
-  "Sports",
-  "Networking",
-  "Food & Drink",
-  "Gaming",
-  "Art & Culture",
-  "Education",
-  "Outdoors",
-  "Other",
+  // Main party types
+  "Regular Party",
+  "Club Night",
+  "After-Exams Party",
+  "Freshers Party",
+  "Themed Party",
+  "Birthday Party",
+  "House Party",
+  "Farewell Party",
+  "Reunion Party",
+  // Nightlife / club-focused
+  "EDM Night",
+  "Bollywood Night",
+  "Hip-Hop Night",
+  "Techno Night",
+  "Latin Night",
+  "Ladies Night",
+  // Special / creative
+  "Masquerade Party",
+  "Glow-in-the-Dark Party",
+  "Blacklight Party",
+  "Costume Party",
+  "Retro/90s Party",
+  "White Party / All-Black Party",
+  // Plus
+  "Pool Party",
+  "Holiday Party",
+  "Silent Disco",
+  "Open Bar Night",
 ] as const;
 
 export type Category = (typeof CATEGORIES)[number];
 
+const _p = "border-border text-muted-foreground"; // inactive (same for all)
+
 export const CATEGORY_META: Record<Category, { emoji: string; color: string; active: string }> = {
-  "Party":        { emoji: "🎉", color: "border-border text-muted-foreground", active: "bg-pink-500/20 border-pink-500 text-pink-400" },
-  "Concert":      { emoji: "🎵", color: "border-border text-muted-foreground", active: "bg-purple-500/20 border-purple-500 text-purple-400" },
-  "Sports":       { emoji: "⚽", color: "border-border text-muted-foreground", active: "bg-green-500/20 border-green-500 text-green-400" },
-  "Networking":   { emoji: "🤝", color: "border-border text-muted-foreground", active: "bg-blue-500/20 border-blue-500 text-blue-400" },
-  "Food & Drink": { emoji: "🍕", color: "border-border text-muted-foreground", active: "bg-orange-500/20 border-orange-500 text-orange-400" },
-  "Gaming":       { emoji: "🎮", color: "border-border text-muted-foreground", active: "bg-cyan-500/20 border-cyan-500 text-cyan-400" },
-  "Art & Culture":{ emoji: "🎨", color: "border-border text-muted-foreground", active: "bg-red-500/20 border-red-500 text-red-400" },
-  "Education":    { emoji: "📚", color: "border-border text-muted-foreground", active: "bg-amber-500/20 border-amber-500 text-amber-400" },
-  "Outdoors":     { emoji: "🌿", color: "border-border text-muted-foreground", active: "bg-emerald-500/20 border-emerald-500 text-emerald-400" },
-  "Other":        { emoji: "✨", color: "border-border text-muted-foreground", active: "bg-gray-500/20 border-gray-500 text-gray-400" },
+  // Main
+  "Regular Party":             { emoji: "🎉", color: _p, active: "bg-pink-500/20 border-pink-500 text-pink-400" },
+  "Club Night":                { emoji: "🎧", color: _p, active: "bg-violet-500/20 border-violet-500 text-violet-400" },
+  "After-Exams Party":         { emoji: "🍾", color: _p, active: "bg-amber-500/20 border-amber-500 text-amber-400" },
+  "Freshers Party":            { emoji: "🎓", color: _p, active: "bg-blue-500/20 border-blue-500 text-blue-400" },
+  "Themed Party":              { emoji: "🎭", color: _p, active: "bg-fuchsia-500/20 border-fuchsia-500 text-fuchsia-400" },
+  "Birthday Party":            { emoji: "🎂", color: _p, active: "bg-rose-500/20 border-rose-500 text-rose-400" },
+  "House Party":               { emoji: "🏠", color: _p, active: "bg-orange-500/20 border-orange-500 text-orange-400" },
+  "Farewell Party":            { emoji: "👋", color: _p, active: "bg-sky-500/20 border-sky-500 text-sky-400" },
+  "Reunion Party":             { emoji: "🔁", color: _p, active: "bg-teal-500/20 border-teal-500 text-teal-400" },
+  // Nightlife
+  "EDM Night":                 { emoji: "🎛️", color: _p, active: "bg-purple-500/20 border-purple-500 text-purple-400" },
+  "Bollywood Night":           { emoji: "🇮🇳", color: _p, active: "bg-orange-600/20 border-orange-600 text-orange-400" },
+  "Hip-Hop Night":             { emoji: "🎤", color: _p, active: "bg-yellow-500/20 border-yellow-500 text-yellow-400" },
+  "Techno Night":              { emoji: "🖤", color: _p, active: "bg-zinc-500/20 border-zinc-400 text-zinc-300" },
+  "Latin Night":               { emoji: "💃", color: _p, active: "bg-red-500/20 border-red-500 text-red-400" },
+  "Ladies Night":              { emoji: "👯", color: _p, active: "bg-pink-400/20 border-pink-400 text-pink-300" },
+  // Special / creative
+  "Masquerade Party":          { emoji: "🎭", color: _p, active: "bg-indigo-500/20 border-indigo-500 text-indigo-400" },
+  "Glow-in-the-Dark Party":    { emoji: "✨", color: _p, active: "bg-lime-500/20 border-lime-500 text-lime-400" },
+  "Blacklight Party":          { emoji: "🔦", color: _p, active: "bg-violet-600/20 border-violet-600 text-violet-400" },
+  "Costume Party":             { emoji: "👘", color: _p, active: "bg-emerald-500/20 border-emerald-500 text-emerald-400" },
+  "Retro/90s Party":           { emoji: "📼", color: _p, active: "bg-cyan-500/20 border-cyan-500 text-cyan-400" },
+  "White Party / All-Black Party": { emoji: "⚪", color: _p, active: "bg-gray-400/20 border-gray-400 text-gray-300" },
+  // Plus
+  "Pool Party":                { emoji: "🏊", color: _p, active: "bg-blue-400/20 border-blue-400 text-blue-300" },
+  "Holiday Party":             { emoji: "🎄", color: _p, active: "bg-green-500/20 border-green-500 text-green-400" },
+  "Silent Disco":              { emoji: "🔇", color: _p, active: "bg-slate-500/20 border-slate-500 text-slate-400" },
+  "Open Bar Night":            { emoji: "🍸", color: _p, active: "bg-amber-600/20 border-amber-600 text-amber-400" },
 };
 
 export type DatePreset = "all" | "today" | "tomorrow" | "weekend" | "custom";
