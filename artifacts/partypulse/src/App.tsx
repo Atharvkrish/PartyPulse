@@ -6,6 +6,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import Login from "@/pages/login";
+import Onboarding from "@/pages/onboarding";
 import CreateEvent from "@/pages/create-event";
 import EventDetail from "@/pages/event-detail";
 import Profile from "@/pages/profile";
@@ -24,13 +25,17 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
       </div>
     );
   }
-  if (!user) return <Redirect to="/login" />;
+  if (!user) {
+    const done = localStorage.getItem("pp_onboarding_done");
+    return <Redirect to={done ? "/login" : "/onboarding"} />;
+  }
   return <Component />;
 }
 
 function Router() {
   return (
     <Switch>
+      <Route path="/onboarding" component={Onboarding} />
       <Route path="/login" component={Login} />
       <Route path="/">
         {() => <ProtectedRoute component={Home} />}
@@ -41,6 +46,9 @@ function Router() {
       <Route path="/events/new">
         {() => <ProtectedRoute component={CreateEvent} />}
       </Route>
+      <Route path="/events/:id/edit">
+        {() => <ProtectedRoute component={EditEvent} />}
+      </Route>
       <Route path="/events/:id">
         {() => <ProtectedRoute component={EventDetail} />}
       </Route>
@@ -49,9 +57,6 @@ function Router() {
       </Route>
       <Route path="/users/:id">
         {() => <ProtectedRoute component={UserProfile} />}
-      </Route>
-      <Route path="/events/:id/edit">
-        {() => <ProtectedRoute component={EditEvent} />}
       </Route>
       <Route component={NotFound} />
     </Switch>

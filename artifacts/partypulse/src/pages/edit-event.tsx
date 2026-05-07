@@ -109,7 +109,7 @@ export default function EditEvent() {
     );
   }
 
-  const mapCenter = pickedLocation ?? { lat: 40.7128, lng: -74.006 };
+  const mapCenter = pickedLocation ?? { lat: 53.3498, lng: -6.2603 };
 
   const inputCls =
     "w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary";

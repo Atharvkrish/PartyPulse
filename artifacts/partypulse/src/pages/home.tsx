@@ -13,6 +13,7 @@ import {
   CATEGORY_META,
 } from "@/lib/eventFilters";
 import EventFilterSheet from "@/components/EventFilterSheet";
+import PwaInstallBanner from "@/components/PwaInstallBanner";
 import BottomNav from "@/components/BottomNav";
 
 import iconUrl from "leaflet/dist/images/marker-icon.png";
@@ -21,6 +22,9 @@ import shadowUrl from "leaflet/dist/images/marker-shadow.png";
 
 delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
 L.Icon.Default.mergeOptions({ iconUrl, iconRetinaUrl, shadowUrl });
+
+// Dublin, Ireland — default centre
+const DUBLIN: [number, number] = [53.3498, -6.2603];
 
 function getMarkerColor(going: number): string {
   if (going >= 16) return "#22c55e";
@@ -37,10 +41,26 @@ function createColoredIcon(color: string, category?: string) {
     html: `<div style="position:relative;width:34px;height:34px;display:flex;align-items:center;justify-content:center;">
       <div style="width:30px;height:30px;border-radius:50%;background:${color};border:2.5px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;font-size:14px;line-height:1;">${emoji}</div>
     </div>`,
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
-    popupAnchor: [0, -18],
+    iconSize: [34, 34],
+    iconAnchor: [17, 17],
+    popupAnchor: [0, -20],
   });
+}
+
+// Saves the Leaflet map instance into a ref
+function MapController({ onReady }: { onReady: (map: L.Map) => void }) {
+  const map = useMap();
+  useEffect(() => { onReady(map); }, []);
+  return null;
+}
+
+// Flies to a target whenever it changes
+function MapFlyTo({ target }: { target: { lat: number; lng: number } | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (target) map.flyTo([target.lat, target.lng], 15, { animate: true, duration: 0.8 });
+  }, [target]);
+  return null;
 }
 
 function UserLocationButton({ onLocated }: { onLocated: (lat: number, lng: number) => void }) {
@@ -73,21 +93,25 @@ export default function Home() {
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
-  const [searchFocused, setSearchFocused] = useState(false);
-  const searchRef = useRef<HTMLInputElement>(null);
+  const [flyTarget, setFlyTarget] = useState<{ lat: number; lng: number } | null>(null);
+  const mapRef = useRef<L.Map | null>(null);
 
   useEffect(() => {
-    const unsub = subscribeEvents(setEvents);
-    return unsub;
+    return subscribeEvents(setEvents);
   }, []);
 
-  // Try to get location silently on mount (for distance sort/filter)
+  // Try to silently get user location on mount for distance filters
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(
       (pos) => setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
       () => {}
     );
   }, []);
+
+  // Auto-open panel when search has results
+  useEffect(() => {
+    if (filters.search.trim() && filteredEvents.length > 0) setPanelOpen(true);
+  }, [filters.search]);
 
   const filteredEvents = applyFilters(events, filters, userCoords?.lat, userCoords?.lng);
   const activeFilterCount = countActiveFilters(filters);
@@ -103,6 +127,12 @@ export default function Home() {
     return CATEGORY_META[cat as keyof typeof CATEGORY_META] ?? null;
   }
 
+  function flyToEvent(event: Event) {
+    setFlyTarget({ lat: event.location.lat, lng: event.location.lng });
+    // Reset so the same event can be clicked again
+    setTimeout(() => setFlyTarget(null), 1000);
+  }
+
   return (
     <div className="h-screen bg-background flex flex-col overflow-hidden">
       {/* ── Header ── */}
@@ -112,31 +142,23 @@ export default function Home() {
             Party<span className="text-primary">Pulse</span>
           </span>
 
-          {/* Search bar */}
+          {/* Inline search */}
           <div className="flex-1 relative">
-            <svg
-              width="14" height="14"
-              viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
-            >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
               <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
             </svg>
             <input
-              ref={searchRef}
               data-testid="input-search-events"
               type="text"
               value={filters.search}
               onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
-              onFocus={() => setSearchFocused(true)}
-              onBlur={() => setSearchFocused(false)}
               placeholder="Search events…"
-              className="w-full bg-background border border-border rounded-full pl-8 pr-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full bg-background border border-border rounded-full pl-8 pr-8 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
             />
             {filters.search && (
-              <button
-                onClick={() => setFilters((f) => ({ ...f, search: "" }))}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
+              <button onClick={() => setFilters((f) => ({ ...f, search: "" }))}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <path d="M18 6L6 18M6 6l12 12" />
                 </svg>
@@ -148,12 +170,10 @@ export default function Home() {
           <button
             data-testid="button-open-filters"
             onClick={() => setFilterSheetOpen(true)}
-            className="relative flex-shrink-0 w-9 h-9 rounded-full bg-background border border-border flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+            className="relative flex-shrink-0 w-9 h-9 rounded-full bg-background border border-border flex items-center justify-center text-muted-foreground hover:text-foreground"
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="4" y1="6" x2="20" y2="6" />
-              <line x1="8" y1="12" x2="16" y2="12" />
-              <line x1="11" y1="18" x2="13" y2="18" />
+              <line x1="4" y1="6" x2="20" y2="6" /><line x1="8" y1="12" x2="16" y2="12" /><line x1="11" y1="18" x2="13" y2="18" />
             </svg>
             {activeFilterCount > 0 && (
               <span className="absolute -top-1 -right-1 min-w-[16px] h-4 bg-primary text-primary-foreground text-[10px] font-bold rounded-full flex items-center justify-center px-1">
@@ -174,72 +194,47 @@ export default function Home() {
 
         {/* Active filter chips */}
         {activeFilterCount > 0 && (
-          <div className="flex items-center gap-2 px-4 pb-2 overflow-x-auto scrollbar-hide">
+          <div className="flex items-center gap-2 px-4 pb-2 overflow-x-auto">
             {filters.categories.map((cat) => {
               const meta = getCategoryMeta(cat);
               return (
-                <button
-                  key={cat}
+                <button key={cat}
                   onClick={() => setFilters((f) => ({ ...f, categories: f.categories.filter((c) => c !== cat) }))}
-                  className="flex-shrink-0 flex items-center gap-1 text-xs bg-primary/10 border border-primary/30 text-primary rounded-full px-2.5 py-1"
-                >
+                  className="flex-shrink-0 flex items-center gap-1 text-xs bg-primary/10 border border-primary/30 text-primary rounded-full px-2.5 py-1">
                   {meta?.emoji} {cat}
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                    <path d="M18 6L6 18M6 6l12 12" />
-                  </svg>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M18 6L6 18M6 6l12 12" /></svg>
                 </button>
               );
             })}
             {filters.datePreset !== "all" && (
-              <button
-                onClick={() => setFilters((f) => ({ ...f, datePreset: "all" }))}
-                className="flex-shrink-0 flex items-center gap-1 text-xs bg-primary/10 border border-primary/30 text-primary rounded-full px-2.5 py-1"
-              >
-                🗓 {filters.datePreset === "custom"
-                  ? `${filters.dateFrom}–${filters.dateTo}`
-                  : filters.datePreset.charAt(0).toUpperCase() + filters.datePreset.slice(1)}
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                  <path d="M18 6L6 18M6 6l12 12" />
-                </svg>
+              <button onClick={() => setFilters((f) => ({ ...f, datePreset: "all" }))}
+                className="flex-shrink-0 flex items-center gap-1 text-xs bg-primary/10 border border-primary/30 text-primary rounded-full px-2.5 py-1">
+                🗓 {filters.datePreset === "custom" ? `${filters.dateFrom}–${filters.dateTo}` : filters.datePreset.charAt(0).toUpperCase() + filters.datePreset.slice(1)}
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M18 6L6 18M6 6l12 12" /></svg>
               </button>
             )}
             {filters.maxDistanceKm !== null && (
-              <button
-                onClick={() => setFilters((f) => ({ ...f, maxDistanceKm: null }))}
-                className="flex-shrink-0 flex items-center gap-1 text-xs bg-primary/10 border border-primary/30 text-primary rounded-full px-2.5 py-1"
-              >
-                📍 Within {filters.maxDistanceKm}km
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                  <path d="M18 6L6 18M6 6l12 12" />
-                </svg>
+              <button onClick={() => setFilters((f) => ({ ...f, maxDistanceKm: null }))}
+                className="flex-shrink-0 flex items-center gap-1 text-xs bg-primary/10 border border-primary/30 text-primary rounded-full px-2.5 py-1">
+                📍 {filters.maxDistanceKm}km
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M18 6L6 18M6 6l12 12" /></svg>
               </button>
             )}
             {filters.sortBy !== "soonest" && (
-              <button
-                onClick={() => setFilters((f) => ({ ...f, sortBy: "soonest" }))}
-                className="flex-shrink-0 flex items-center gap-1 text-xs bg-primary/10 border border-primary/30 text-primary rounded-full px-2.5 py-1"
-              >
+              <button onClick={() => setFilters((f) => ({ ...f, sortBy: "soonest" }))}
+                className="flex-shrink-0 flex items-center gap-1 text-xs bg-primary/10 border border-primary/30 text-primary rounded-full px-2.5 py-1">
                 Sort: {filters.sortBy}
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                  <path d="M18 6L6 18M6 6l12 12" />
-                </svg>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M18 6L6 18M6 6l12 12" /></svg>
               </button>
             )}
             {filters.capacityOnly && (
-              <button
-                onClick={() => setFilters((f) => ({ ...f, capacityOnly: false }))}
-                className="flex-shrink-0 flex items-center gap-1 text-xs bg-primary/10 border border-primary/30 text-primary rounded-full px-2.5 py-1"
-              >
+              <button onClick={() => setFilters((f) => ({ ...f, capacityOnly: false }))}
+                className="flex-shrink-0 flex items-center gap-1 text-xs bg-primary/10 border border-primary/30 text-primary rounded-full px-2.5 py-1">
                 Spots available
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                  <path d="M18 6L6 18M6 6l12 12" />
-                </svg>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M18 6L6 18M6 6l12 12" /></svg>
               </button>
             )}
-            <button
-              onClick={() => setFilters(DEFAULT_FILTERS)}
-              className="flex-shrink-0 text-xs text-muted-foreground hover:text-foreground px-2"
-            >
+            <button onClick={() => setFilters(DEFAULT_FILTERS)} className="flex-shrink-0 text-xs text-muted-foreground hover:text-foreground px-1">
               Clear all
             </button>
           </div>
@@ -248,16 +243,13 @@ export default function Home() {
 
       {/* ── Map ── */}
       <div className="relative flex-1 overflow-hidden">
-        <MapContainer
-          center={[40.7128, -74.006]}
-          zoom={12}
-          style={{ height: "100%", width: "100%" }}
-          className="z-0"
-        >
+        <MapContainer center={DUBLIN} zoom={13} style={{ height: "100%", width: "100%" }} className="z-0">
           <TileLayer
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           />
+          <MapController onReady={(m) => { mapRef.current = m; }} />
+          <MapFlyTo target={flyTarget} />
           {filteredEvents.map((event) => (
             <Marker
               key={event.id}
@@ -323,10 +315,7 @@ export default function Home() {
                 <div className="text-center py-6 space-y-2">
                   <p className="text-muted-foreground text-sm">No events match your filters.</p>
                   {activeFilterCount > 0 && (
-                    <button
-                      onClick={() => setFilters(DEFAULT_FILTERS)}
-                      className="text-xs text-primary hover:underline"
-                    >
+                    <button onClick={() => setFilters(DEFAULT_FILTERS)} className="text-xs text-primary hover:underline">
                       Clear filters
                     </button>
                   )}
@@ -339,26 +328,32 @@ export default function Home() {
                   <div
                     key={event.id}
                     data-testid={`card-event-${event.id}`}
-                    onClick={() => setLocation(`/events/${event.id}`)}
                     className="flex items-center gap-3 p-3 bg-background border border-border rounded-lg cursor-pointer hover:border-primary/50 transition-colors"
                   >
-                    <div
-                      className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: getMarkerColor(event.going.length) }}
-                    />
-                    <div className="flex-1 min-w-0">
+                    {/* Fly-to button */}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); flyToEvent(event); setPanelOpen(false); }}
+                      className="flex-shrink-0 w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary hover:bg-primary/20 transition-colors"
+                      title="Show on map"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z" />
+                        <circle cx="12" cy="10" r="3" />
+                      </svg>
+                    </button>
+
+                    <div className="flex-1 min-w-0" onClick={() => setLocation(`/events/${event.id}`)}>
                       <div className="flex items-center gap-1.5 mb-0.5">
-                        {catMeta && (
-                          <span className="text-xs">{catMeta.emoji}</span>
-                        )}
+                        {catMeta && <span className="text-xs">{catMeta.emoji}</span>}
                         <p className="text-sm font-medium text-foreground truncate">{event.title}</p>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        {event.date} &bull; {event.going.length} going
-                        {dist && <> &bull; {dist}</>}
+                        {event.date} &bull; {event.going.length} going{dist && <> &bull; {dist}</>}
                       </p>
                     </div>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-muted-foreground flex-shrink-0">
+
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                      className="text-muted-foreground flex-shrink-0" onClick={() => setLocation(`/events/${event.id}`)}>
                       <path d="M9 18l6-6-6-6" />
                     </svg>
                   </div>
@@ -369,7 +364,10 @@ export default function Home() {
         </div>
       </div>
 
-      {/* ── Filter sheet ── */}
+      {/* PWA install prompt */}
+      <PwaInstallBanner />
+
+      {/* Filter sheet */}
       <EventFilterSheet
         open={filterSheetOpen}
         filters={filters}

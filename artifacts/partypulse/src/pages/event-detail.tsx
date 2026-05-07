@@ -13,9 +13,40 @@ import {
 import { subscribeMessages, sendMessage, deleteMessage, ChatMessage } from "@/lib/firestoreChat";
 import { subscribePhotos, uploadEventPhoto, deletePhoto, EventPhoto } from "@/lib/storagePhotos";
 import { logActivity } from "@/lib/firestoreActivity";
+import { CATEGORY_META } from "@/lib/eventFilters";
 import { useToast } from "@/hooks/use-toast";
 
 type Tab = "info" | "chat" | "gallery";
+
+const rsvpConfig: {
+  status: RsvpStatus;
+  label: string;
+  emoji: string;
+  inactive: string;
+  active: string;
+}[] = [
+  {
+    status: "going",
+    label: "Going",
+    emoji: "✅",
+    inactive: "border-border text-muted-foreground hover:border-green-500/50 hover:text-green-400",
+    active: "bg-green-500/20 border-green-500 text-green-400",
+  },
+  {
+    status: "interested",
+    label: "Interested",
+    emoji: "⭐",
+    inactive: "border-border text-muted-foreground hover:border-amber-500/50 hover:text-amber-400",
+    active: "bg-amber-500/20 border-amber-500 text-amber-400",
+  },
+  {
+    status: "cantGo",
+    label: "Can't Go",
+    emoji: "❌",
+    inactive: "border-border text-muted-foreground hover:border-red-500/50 hover:text-red-400",
+    active: "bg-red-500/20 border-red-500 text-red-400",
+  },
+];
 
 export default function EventDetail() {
   const params = useParams<{ id: string }>();
@@ -36,32 +67,27 @@ export default function EventDetail() {
 
   useEffect(() => {
     if (!eventId) return;
-    const unsub = subscribeEvent(eventId, setEvent);
-    return unsub;
+    return subscribeEvent(eventId, setEvent);
   }, [eventId]);
 
   useEffect(() => {
     if (!eventId) return;
-    const unsub = subscribeMessages(eventId, setMessages);
-    return unsub;
+    return subscribeMessages(eventId, setMessages);
   }, [eventId]);
 
   useEffect(() => {
     if (!eventId) return;
-    const unsub = subscribePhotos(eventId, setPhotos);
-    return unsub;
+    return subscribePhotos(eventId, setPhotos);
   }, [eventId]);
 
   useEffect(() => {
-    if (tab === "chat") {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }
+    if (tab === "chat") messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, tab]);
 
   if (!event) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center text-muted-foreground">
-        Loading...
+        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -95,18 +121,30 @@ export default function EventDetail() {
     }
   }
 
+  async function handleShare() {
+    const url = `${window.location.origin}${import.meta.env.BASE_URL}events/${event!.id}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: event!.title,
+          text: event!.description || `Check out ${event!.title} on PartyPulse!`,
+          url,
+        });
+      } else {
+        await navigator.clipboard.writeText(url);
+        toast({ title: "Link copied!", description: "Share it with your crew." });
+      }
+    } catch {
+      // user cancelled share — no error needed
+    }
+  }
+
   async function handleSendMessage(e: React.FormEvent) {
     e.preventDefault();
     if (!chatText.trim() || !user || !event) return;
     setSendingChat(true);
     try {
-      await sendMessage(
-        event.id,
-        chatText.trim(),
-        user.uid,
-        user.displayName || user.email || "Anonymous",
-        user.photoURL || undefined
-      );
+      await sendMessage(event.id, chatText.trim(), user.uid, user.displayName || user.email || "Anonymous", user.photoURL || undefined);
       setChatText("");
     } catch {
       toast({ title: "Failed to send message", variant: "destructive" });
@@ -125,13 +163,7 @@ export default function EventDetail() {
     if (!file || !user || !event) return;
     setUploadingPhoto(true);
     try {
-      await uploadEventPhoto(
-        event.id,
-        file,
-        user.uid,
-        user.displayName || user.email || "Anonymous",
-        setPhotoProgress
-      );
+      await uploadEventPhoto(event.id, file, user.uid, user.displayName || user.email || "Anonymous", setPhotoProgress);
       toast({ title: "Photo uploaded!" });
       logActivity({
         actorId: user.uid,
@@ -166,17 +198,12 @@ export default function EventDetail() {
   }
 
   const currentRsvp = getUserRsvp();
-
-  const rsvpConfig: { status: RsvpStatus; label: string; color: string; activeColor: string }[] = [
-    { status: "going", label: "Going", color: "border-border text-muted-foreground", activeColor: "bg-green-500/20 border-green-500 text-green-400" },
-    { status: "interested", label: "Interested", color: "border-border text-muted-foreground", activeColor: "bg-amber-500/20 border-amber-500 text-amber-400" },
-    { status: "cantGo", label: "Can't Go", color: "border-border text-muted-foreground", activeColor: "bg-red-500/20 border-red-500 text-red-400" },
-  ];
+  const catMeta = event.category ? CATEGORY_META[event.category as keyof typeof CATEGORY_META] : null;
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       {event.imageUrl && (
-        <div className="relative h-48 flex-shrink-0">
+        <div className="relative h-52 flex-shrink-0">
           <img src={event.imageUrl} alt={event.title} className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-b from-transparent to-background/80" />
           <button
@@ -186,12 +213,23 @@ export default function EventDetail() {
           >
             &larr; Back
           </button>
+          <button
+            data-testid="button-share"
+            onClick={handleShare}
+            className="absolute top-4 right-4 bg-background/60 backdrop-blur-sm border border-border rounded-full px-3 py-1 text-sm text-foreground flex items-center gap-1.5"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+            </svg>
+            Share
+          </button>
         </div>
       )}
 
       <div className="flex-1 max-w-2xl mx-auto w-full px-4 pb-8">
         {!event.imageUrl && (
-          <div className="pt-4 mb-2">
+          <div className="pt-4 mb-2 flex items-center justify-between">
             <button
               data-testid="button-back"
               onClick={() => setLocation("/")}
@@ -199,10 +237,26 @@ export default function EventDetail() {
             >
               &larr; Back
             </button>
+            <button
+              data-testid="button-share"
+              onClick={handleShare}
+              className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground border border-border rounded-full px-3 py-1"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+              </svg>
+              Share
+            </button>
           </div>
         )}
 
-        <div className="mt-4 mb-4">
+        <div className="mt-4 mb-5">
+          {catMeta && (
+            <span className="inline-flex items-center gap-1 text-xs font-medium bg-primary/10 text-primary border border-primary/20 rounded-full px-2.5 py-0.5 mb-2">
+              {catMeta.emoji} {event.category}
+            </span>
+          )}
           <h1 className="text-2xl font-black text-foreground">{event.title}</h1>
           <p className="text-muted-foreground text-sm mt-1">
             {event.date} at {event.time} &bull; by {event.creatorName}
@@ -214,23 +268,29 @@ export default function EventDetail() {
           )}
         </div>
 
-        <div className="flex gap-2 mb-5">
-          {rsvpConfig.map(({ status, label, color, activeColor }) => (
-            <button
-              key={status}
-              data-testid={`button-rsvp-${status}`}
-              onClick={() => handleRsvp(status)}
-              disabled={status === "going" && isFull && currentRsvp !== "going"}
-              className={`flex-1 py-2 text-xs font-semibold border rounded-lg transition-all ${
-                currentRsvp === status ? activeColor : color
-              } disabled:opacity-40 disabled:cursor-not-allowed`}
-            >
-              {label}
-              {status === "going" && isFull && currentRsvp !== "going" && " (Full)"}
-            </button>
-          ))}
+        {/* ── RSVP buttons — large, thumb-friendly ── */}
+        <div className="grid grid-cols-3 gap-3 mb-5">
+          {rsvpConfig.map(({ status, label, emoji, inactive, active }) => {
+            const isActive = currentRsvp === status;
+            const disabled = status === "going" && isFull && !isActive;
+            return (
+              <button
+                key={status}
+                data-testid={`button-rsvp-${status}`}
+                onClick={() => handleRsvp(status)}
+                disabled={disabled}
+                className={`flex flex-col items-center justify-center gap-1.5 py-4 rounded-2xl border-2 font-bold text-sm transition-all ${
+                  isActive ? active : inactive
+                } disabled:opacity-40 disabled:cursor-not-allowed`}
+              >
+                <span className="text-xl">{emoji}</span>
+                <span>{label}{disabled ? " (Full)" : ""}</span>
+              </button>
+            );
+          })}
         </div>
 
+        {/* ── Tabs ── */}
         <div className="flex border border-border rounded-lg overflow-hidden mb-5">
           {(["info", "chat", "gallery"] as Tab[]).map((t) => (
             <button
@@ -242,16 +302,13 @@ export default function EventDetail() {
               }`}
             >
               {t}
-              {t === "chat" && messages.length > 0 && (
-                <span className="ml-1 text-xs opacity-60">{messages.length}</span>
-              )}
-              {t === "gallery" && photos.length > 0 && (
-                <span className="ml-1 text-xs opacity-60">{photos.length}</span>
-              )}
+              {t === "chat" && messages.length > 0 && <span className="ml-1 text-xs opacity-60">{messages.length}</span>}
+              {t === "gallery" && photos.length > 0 && <span className="ml-1 text-xs opacity-60">{photos.length}</span>}
             </button>
           ))}
         </div>
 
+        {/* ── Info tab ── */}
         {tab === "info" && (
           <div className="space-y-4">
             {event.description && (
@@ -260,20 +317,20 @@ export default function EventDetail() {
               </div>
             )}
             <div className="bg-card border border-border rounded-xl p-4">
-              <p className="text-xs font-medium text-muted-foreground mb-1">Location</p>
+              <p className="text-xs font-medium text-muted-foreground mb-1">📍 Location</p>
               <p className="text-sm text-foreground">{event.location.address}</p>
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div className="bg-card border border-border rounded-xl p-3 text-center">
-                <p className="text-lg font-bold text-green-400">{event.going.length}</p>
+                <p className="text-xl font-bold text-green-400">{event.going.length}</p>
                 <p className="text-xs text-muted-foreground">Going</p>
               </div>
               <div className="bg-card border border-border rounded-xl p-3 text-center">
-                <p className="text-lg font-bold text-amber-400">{event.interested.length}</p>
+                <p className="text-xl font-bold text-amber-400">{event.interested.length}</p>
                 <p className="text-xs text-muted-foreground">Interested</p>
               </div>
               <div className="bg-card border border-border rounded-xl p-3 text-center">
-                <p className="text-lg font-bold text-red-400">{event.cantGo.length}</p>
+                <p className="text-xl font-bold text-red-400">{event.cantGo.length}</p>
                 <p className="text-xs text-muted-foreground">Can't Go</p>
               </div>
             </div>
@@ -303,23 +360,11 @@ export default function EventDetail() {
                     <div className="space-y-2">
                       {event.going.map((uid) => (
                         <div key={uid} className="flex items-center justify-between">
-                          <span className="text-xs text-foreground font-mono">{uid.slice(0, 12)}...</span>
+                          <span className="text-xs text-foreground font-mono">{uid.slice(0, 12)}…</span>
                           {event.bannedUsers.includes(uid) ? (
-                            <button
-                              data-testid={`button-unban-${uid}`}
-                              onClick={() => handleUnban(uid)}
-                              className="text-xs text-primary hover:underline"
-                            >
-                              Unban
-                            </button>
+                            <button data-testid={`button-unban-${uid}`} onClick={() => handleUnban(uid)} className="text-xs text-primary hover:underline">Unban</button>
                           ) : (
-                            <button
-                              data-testid={`button-ban-${uid}`}
-                              onClick={() => handleBan(uid)}
-                              className="text-xs text-destructive hover:underline"
-                            >
-                              Ban
-                            </button>
+                            <button data-testid={`button-ban-${uid}`} onClick={() => handleBan(uid)} className="text-xs text-destructive hover:underline">Ban</button>
                           )}
                         </div>
                       ))}
@@ -331,6 +376,7 @@ export default function EventDetail() {
           </div>
         )}
 
+        {/* ── Chat tab ── */}
         {tab === "chat" && (
           <div className="flex flex-col">
             {isBanned && (
@@ -346,27 +392,17 @@ export default function EventDetail() {
                 const isOwn = msg.userId === user?.uid;
                 const canDelete = isOwn || isCreator;
                 return (
-                  <div
-                    key={msg.id}
-                    data-testid={`message-${msg.id}`}
-                    className={`flex gap-2 ${isOwn ? "flex-row-reverse" : ""}`}
-                  >
+                  <div key={msg.id} data-testid={`message-${msg.id}`} className={`flex gap-2 ${isOwn ? "flex-row-reverse" : ""}`}>
                     <div className="w-7 h-7 rounded-full bg-primary/20 border border-primary flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">
                       {(msg.userName || "?")[0].toUpperCase()}
                     </div>
                     <div className={`max-w-[75%] ${isOwn ? "items-end" : "items-start"} flex flex-col`}>
-                      <p className={`text-xs text-muted-foreground mb-0.5 ${isOwn ? "text-right" : ""}`}>
-                        {msg.userName}
-                      </p>
+                      <p className={`text-xs text-muted-foreground mb-0.5 ${isOwn ? "text-right" : ""}`}>{msg.userName}</p>
                       <div className={`px-3 py-2 rounded-xl text-sm ${isOwn ? "bg-primary text-primary-foreground" : "bg-card border border-border text-foreground"}`}>
                         {msg.text}
                       </div>
                       {canDelete && (
-                        <button
-                          data-testid={`button-delete-message-${msg.id}`}
-                          onClick={() => handleDeleteMessage(msg.id)}
-                          className="text-xs text-muted-foreground hover:text-destructive mt-0.5"
-                        >
+                        <button data-testid={`button-delete-message-${msg.id}`} onClick={() => handleDeleteMessage(msg.id)} className="text-xs text-muted-foreground hover:text-destructive mt-0.5">
                           delete
                         </button>
                       )}
@@ -399,6 +435,7 @@ export default function EventDetail() {
           </div>
         )}
 
+        {/* ── Gallery tab ── */}
         {tab === "gallery" && (
           <div>
             <div className="mb-4">
@@ -412,7 +449,7 @@ export default function EventDetail() {
                   className="hidden"
                 />
                 <span className="text-sm text-muted-foreground">
-                  {uploadingPhoto ? `Uploading ${photoProgress}%...` : "Upload a photo"}
+                  {uploadingPhoto ? `Uploading ${photoProgress}%…` : "Upload a photo"}
                 </span>
               </label>
               {uploadingPhoto && (
@@ -429,28 +466,16 @@ export default function EventDetail() {
                   const canDelete = photo.uploaderId === user?.uid || isCreator;
                   return (
                     <div key={photo.id} className="relative group rounded-lg overflow-hidden aspect-square">
-                      <img
-                        data-testid={`photo-${photo.id}`}
-                        src={photo.url}
-                        alt="Event photo"
-                        className="w-full h-full object-cover"
-                      />
+                      <img data-testid={`photo-${photo.id}`} src={photo.url} alt="Event photo" className="w-full h-full object-cover" />
                       {canDelete && (
                         <button
                           data-testid={`button-delete-photo-${photo.id}`}
-                          onClick={() => {
-                            if (confirm("Delete this photo?")) {
-                              deletePhoto(event.id, photo.id, photo.storagePath);
-                            }
-                          }}
+                          onClick={() => { if (confirm("Delete this photo?")) deletePhoto(event.id, photo.id, photo.storagePath); }}
                           className="absolute top-1 right-1 bg-background/80 backdrop-blur-sm border border-border text-destructive rounded-full w-7 h-7 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center hover:bg-destructive hover:text-white"
                           title="Delete photo"
                         >
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <polyline points="3 6 5 6 21 6" />
-                            <path d="M19 6l-1 14H6L5 6" />
-                            <path d="M10 11v6M14 11v6" />
-                            <path d="M9 6V4h6v2" />
+                            <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v6M14 11v6" /><path d="M9 6V4h6v2" />
                           </svg>
                         </button>
                       )}

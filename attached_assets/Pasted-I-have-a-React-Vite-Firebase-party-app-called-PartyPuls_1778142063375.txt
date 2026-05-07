@@ -1,0 +1,48 @@
+I have a React + Vite + Firebase party app called PartyPulse. I need multiple improvements and fixes. Please implement ALL of the following:
+
+### 🔧 1. Fix Phone Authentication (not working)
+- Phone sign‑in currently fails. Debug and fix it.
+- Ensure proper Firebase Phone Auth setup (Recaptcha verifier, test numbers, etc.).
+- Add clear error messages for invalid phone numbers or OTP.
+
+### 🎨 2. Make RSVP Buttons Bigger
+- On the event detail page, make "Going", "Interested", "Can't Go" buttons larger, full‑width or large rounded, easy to tap on mobile.
+
+### 👥 3. Fix "Find Friends" Function (not working)
+- Implement search users by email/display name, send friend requests, accept/decline, list friends.
+- Use Firestore collections: `friendRequests`, update user documents with `friends` array.
+
+### 🔍 4. Improve Search: Fly to Event Location
+- When search by event name, the map flies to that event's location and highlights marker.
+- Search results list; click on a result centers map on event.
+
+### 🇮🇪 5. Default Map Location: UK / Ireland
+- Initial map center Dublin (53.3498, -6.2603), zoom 13; apply to location pickers.
+
+### 📲 6. Home Screen Install Prompt (PWA)
+- Show banner on login and home screens with install prompt (use `beforeinstallprompt`, fallback instructions for iOS). Limit frequency with localStorage.
+
+### 🎭 7. Onboarding Teaser Screen (Before Login)
+- Full‑screen slideshow (3-4 slides) for new users only, then buttons "Sign In" and "Create Account". Skip if logged in. Store flag.
+
+### 📍 8. Profile Page: Show Events I'm Going To
+- On the user profile page (`/profile`), add a new section **"Events I'm Going To"**.
+- Query Firestore for all events where the user's UID is in the `going` array.
+- Display them as a list or cards (title, date, location thumbnail). Clicking a card takes user to that event detail page.
+- If none, show "You haven't RSVPed 'Going' to any events yet."
+
+### 🔗 9. Share Event Option
+- On every event detail page, add a **Share** button (icon + text).
+- When clicked, use the Web Share API if available (`navigator.share`) to share title, description, and event URL.
+- Fallback: copy event link to clipboard and show a toast "Link copied!".
+- The event URL should be deep link to that event page (e.g., `/events/{eventId}`).
+- Also add a share icon on each event card in the map list and search results.
+
+### Additional Requirements
+- Do not break existing features (create event, chat, gallery, etc.).
+- Use existing Firestore structure; add fields/collections as needed.
+- Provide code for all modified/added components.
+- Ensure TypeScript compiles without errors.
+- After implementation, write a summary of changed files.
+
+Thank you!

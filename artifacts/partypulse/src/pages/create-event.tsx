@@ -212,7 +212,7 @@ export default function CreateEvent() {
               Location * <span className="text-primary">— click on the map</span>
             </label>
             <div className="rounded-xl overflow-hidden border border-border" style={{ height: 220 }}>
-              <MapContainer center={[40.7128, -74.006]} zoom={12} style={{ height: "100%", width: "100%" }}>
+              <MapContainer center={[53.3498, -6.2603]} zoom={13} style={{ height: "100%", width: "100%" }}>
                 <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                 <LocationPicker onPick={handlePickLocation} />
                 {pickedLocation && <Marker position={[pickedLocation.lat, pickedLocation.lng]} />}
