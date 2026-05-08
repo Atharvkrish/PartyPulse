@@ -3,28 +3,28 @@ import { useLocation } from "wouter";
 
 const SLIDES = [
   {
-    emoji: "🗺️",
+   
     title: "Discover Parties Near You",
     sub: "Find events happening right now on a live interactive map.",
-    bg: "from-violet-900/40 to-background",
+    image: "/slides/Discover.jpg", 
   },
   {
-    emoji: "🎉",
+  
     title: "Every Night Has a Vibe",
     sub: "25 party categories — from Club Nights to Birthday Parties to Silent Discos.",
-    bg: "from-pink-900/40 to-background",
+    image: "/slides/vibe.jpg", 
   },
   {
-    emoji: "👯",
+    
     title: "Go With Your Crew",
     sub: "Add friends, RSVP together, and chat inside every event.",
-    bg: "from-blue-900/40 to-background",
+      image: "/slides/friends.jpg", 
   },
   {
-    emoji: "✨",
+    
     title: "Host Your Own Event",
     sub: "Create a party in seconds and invite everyone nearby.",
-    bg: "from-amber-900/40 to-background",
+      image: "/slides/host.jpg", 
   },
 ];
 
@@ -58,10 +58,17 @@ export default function Onboarding() {
 
   return (
     <div
-      className={`min-h-screen bg-gradient-to-b ${slide.bg} flex flex-col items-center justify-between px-6 pt-16 pb-12 select-none`}
+          className="min-h-screen flex flex-col items-center justify-between px-6 pt-16 pb-12 select-none relative"
+          style={{ backgroundImage: `url(${slide.image})`, backgroundSize: "cover", backgroundPosition: "center" }}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
-    >
+      >
+          {/* Dark overlay so text is readable */}
+          <div className="absolute inset-0 bg-black/50 z-0" />
+
+          {/* THIS IS THE WRAPPER — put everything inside it */}
+          <div className="relative z-10 w-full flex flex-col items-center justify-between flex-1">
+
       {/* Skip */}
       <button
         onClick={() => finish("/login")}
@@ -72,7 +79,7 @@ export default function Onboarding() {
 
       {/* Slide content */}
       <div className="flex-1 flex flex-col items-center justify-center text-center gap-6 max-w-sm">
-        <div className="text-8xl drop-shadow-lg">{slide.emoji}</div>
+      
         <h1 className="text-3xl font-black text-foreground leading-tight">{slide.title}</h1>
         <p className="text-muted-foreground text-base leading-relaxed">{slide.sub}</p>
       </div>
@@ -116,6 +123,7 @@ export default function Onboarding() {
           </button>
         </div>
       )}
-    </div>
+            </div>    {/* ← close the z-10 wrapper */}
+        </div>      {/* ← close the outer background div */ }
   );
 }
