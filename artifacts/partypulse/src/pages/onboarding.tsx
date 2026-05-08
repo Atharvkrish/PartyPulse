@@ -124,6 +124,6 @@ export default function Onboarding() {
         </div>
       )}
             </div>    {/* ← close the z-10 wrapper */}
-        </div>      {/* ← close the outer background div */ }
+        </div>      {/* ← close the outer background div */}
   );
 }
