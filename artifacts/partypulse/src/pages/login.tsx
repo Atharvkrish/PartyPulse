@@ -4,12 +4,11 @@ import { useToast } from "@/hooks/use-toast";
 import {
   loginWithEmail,
   registerWithEmail,
-  setupRecaptcha,
-  sendPhoneOtp,
+ 
 } from "@/lib/firebaseAuth";
-import { RecaptchaVerifier, ConfirmationResult } from "firebase/auth";
 
-type Tab = "email" | "phone";
+
+
 type EmailMode = "login" | "register";
 
 function friendlyError(err: unknown): string {
@@ -31,21 +30,21 @@ export default function Login() {
   const search = useSearch();
   const defaultMode: EmailMode = search.includes("mode=register") ? "register" : "login";
 
-  const [tab, setTab] = useState<Tab>("email");
+  
   const [emailMode, setEmailMode] = useState<EmailMode>(defaultMode);
   const [loading, setLoading] = useState(false);
-  const [phoneStep, setPhoneStep] = useState<"phone" | "otp">("phone");
-  const [confirmResult, setConfirmResult] = useState<ConfirmationResult | null>(null);
+
+ 
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState("");
+ 
+  
 
   // Persist the RecaptchaVerifier across retries — creating a new one on the
   // same container element causes Firebase to throw an internal-error.
-  const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
+
 
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -55,10 +54,7 @@ export default function Login() {
     if (search.includes("mode=register")) setEmailMode("register");
   }, [search]);
 
-  function clearRecaptcha() {
-    try { recaptchaVerifierRef.current?.clear(); } catch { /* ignore */ }
-    recaptchaVerifierRef.current = null;
-  }
+
 
   async function handleEmailSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -78,7 +74,7 @@ export default function Login() {
     }
   }
 
-  async function handleSendOtp(e: React.FormEvent) {
+/*  async function handleSendOtp(e: React.FormEvent) {
     e.preventDefault();
     // Normalise: if user forgot +, prepend +353 (Ireland) as default
     let normalised = phone.trim();
@@ -124,14 +120,14 @@ export default function Login() {
     setOtp("");
     clearRecaptcha();
   }
+    */
 
   const inputCls =
     "w-full bg-input border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary";
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      {/* Invisible recaptcha container — must always be in the DOM */}
-      <div id="recaptcha-container" />
+     
 
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
@@ -143,25 +139,10 @@ export default function Login() {
 
         <div className="bg-card border border-border rounded-xl p-6 shadow-xl">
           {/* Tab switcher */}
-          <div className="flex border border-border rounded-lg overflow-hidden mb-6">
-            <button
-              data-testid="tab-email"
-              onClick={() => setTab("email")}
-              className={`flex-1 py-2 text-sm font-medium transition-colors ${tab === "email" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
-            >
-              Email
-            </button>
-            <button
-              data-testid="tab-phone"
-              onClick={() => { setTab("phone"); resetPhone(); }}
-              className={`flex-1 py-2 text-sm font-medium transition-colors ${tab === "phone" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
-            >
-              Phone
-            </button>
-          </div>
+        
 
           {/* ── Email ── */}
-          {tab === "email" && (
+        
             <form onSubmit={handleEmailSubmit} className="space-y-4">
               {emailMode === "register" && (
                 <div>
@@ -220,76 +201,79 @@ export default function Login() {
                 </button>
               </p>
             </form>
-          )}
-
+         
+          {/*/**/}
           {/* ── Phone: enter number ── */}
-          {tab === "phone" && phoneStep === "phone" && (
-            <form onSubmit={handleSendOtp} className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">
-                  Phone Number
-                </label>
-                <input
-                  data-testid="input-phone"
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  required
-                  className={inputCls}
-                  placeholder="+353 89 123 4567"
-                />
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Include country code (e.g. +353 for Ireland, +44 for UK).
-                  Irish numbers without + will auto-prefix +353.
-                </p>
-              </div>
-              <button
-                data-testid="button-send-otp"
-                type="submit"
-                disabled={loading}
-                className="w-full bg-primary text-primary-foreground rounded-lg py-3 font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
-              >
-                {loading ? "Sending…" : "Send Code"}
-              </button>
-            </form>
-          )}
+          {/*{tab === "phone" && phoneStep === "phone" && (*/}
+          {/*  <form onSubmit={handleSendOtp} className="space-y-4">*/}
+          {/*    <div>*/}
+          {/*      <label className="block text-xs font-medium text-muted-foreground mb-1">*/}
+          {/*        Phone Number*/}
+          {/*      </label>*/}
+          {/*      <input*/}
+          {/*        data-testid="input-phone"*/}
+          {/*        type="tel"*/}
+          {/*        value={phone}*/}
+          {/*        onChange={(e) => setPhone(e.target.value)}*/}
+          {/*        required*/}
+          {/*        className={inputCls}*/}
+          {/*        placeholder="+353 89 123 4567"*/}
+          {/*      />*/}
+          {/*      <p className="mt-1 text-xs text-muted-foreground">*/}
+          {/*        Include country code (e.g. +353 for Ireland, +44 for UK).*/}
+          {/*        Irish numbers without + will auto-prefix +353.*/}
+          {/*      </p>*/}
+          {/*    </div>*/}
+          {/*    <button*/}
+          {/*      data-testid="button-send-otp"*/}
+          {/*      type="submit"*/}
+          {/*      disabled={loading}*/}
+          {/*      className="w-full bg-primary text-primary-foreground rounded-lg py-3 font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-50"*/}
+          {/*    >*/}
+          {/*      {loading ? "Sending…" : "Send Code"}*/}
+          {/*    </button>*/}
+          {/*  </form>*/}
+          {/*)}*/}
 
           {/* ── Phone: enter OTP ── */}
-          {tab === "phone" && phoneStep === "otp" && (
-            <form onSubmit={handleVerifyOtp} className="space-y-4">
-              <p className="text-sm text-muted-foreground text-center">
-                Enter the 6-digit code sent to{" "}
-                <span className="text-foreground font-medium">{phone}</span>
-              </p>
-              <input
-                data-testid="input-otp"
-                type="text"
-                inputMode="numeric"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                required
-                maxLength={6}
-                className={`${inputCls} text-center tracking-[0.5em] text-lg font-bold`}
-                placeholder="000000"
-                autoFocus
-              />
-              <button
-                data-testid="button-verify-otp"
-                type="submit"
-                disabled={loading || otp.length < 6}
-                className="w-full bg-primary text-primary-foreground rounded-lg py-3 font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
-              >
-                {loading ? "Verifying…" : "Verify Code"}
-              </button>
-              <button
-                type="button"
-                onClick={resetPhone}
-                className="w-full text-xs text-muted-foreground hover:text-foreground"
-              >
-                ← Wrong number? Go back
-              </button>
-            </form>
-          )}
+          {/*{tab === "phone" && phoneStep === "otp" && (*/}
+          {/*  <form onSubmit={handleVerifyOtp} className="space-y-4">*/}
+          {/*    <p className="text-sm text-muted-foreground text-center">*/}
+          {/*      Enter the 6-digit code sent to{" "}*/}
+          {/*      <span className="text-foreground font-medium">{phone}</span>*/}
+          {/*    </p>*/}
+          {/*    <input*/}
+          {/*      data-testid="input-otp"*/}
+          {/*      type="text"*/}
+          {/*      inputMode="numeric"*/}
+          {/*      value={otp}*/}
+          {/*      onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}*/}
+          {/*      required*/}
+          {/*      maxLength={6}*/}
+          {/*      className={`${inputCls} text-center tracking-[0.5em] text-lg font-bold`}*/}
+          {/*      placeholder="000000"*/}
+          {/*      autoFocus*/}
+          {/*    />*/}
+          {/*    <button*/}
+          {/*      data-testid="button-verify-otp"*/}
+          {/*      type="submit"*/}
+          {/*      disabled={loading || otp.length < 6}*/}
+          {/*      className="w-full bg-primary text-primary-foreground rounded-lg py-3 font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-50"*/}
+          {/*    >*/}
+          {/*      {loading ? "Verifying…" : "Verify Code"}*/}
+          {/*    </button>*/}
+          {/*    <button*/}
+          {/*      type="button"*/}
+          {/*      onClick={resetPhone}*/}
+          {/*      className="w-full text-xs text-muted-foreground hover:text-foreground"*/}
+          {/*    >*/}
+          {/*      ← Wrong number? Go back*/}
+          {/*    </button>*/}
+          {/*  </form>*/}
+          {/*        )}*/}
+
+
+                  
         </div>
       </div>
     </div>
