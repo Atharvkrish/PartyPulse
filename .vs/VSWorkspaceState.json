@@ -11,6 +11,6 @@
     "\\artifacts\\partypulse\\src\\contexts",
     "\\artifacts\\partypulse\\src\\pages"
   ],
-  "SelectedNode": "\\artifacts\\partypulse\\public\\slides",
+  "SelectedNode": "\\artifacts\\partypulse\\src\\pages\\login.tsx",
   "PreviewInSolutionExplorer": false
 }

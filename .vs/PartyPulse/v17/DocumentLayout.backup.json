@@ -3,6 +3,18 @@
   "WorkspaceRootPath": "C:\\Users\\athar\\source\\repos\\PartyPulse\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\athar\\source\\repos\\PartyPulse\\artifacts\\partypulse\\src\\pages\\home.tsx||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:artifacts\\partypulse\\src\\pages\\home.tsx||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\athar\\source\\repos\\PartyPulse\\artifacts\\partypulse\\src\\App.tsx||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:artifacts\\partypulse\\src\\App.tsx||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\athar\\source\\repos\\PartyPulse\\artifacts\\partypulse\\src\\main.tsx||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:artifacts\\partypulse\\src\\main.tsx||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\athar\\source\\repos\\PartyPulse\\artifacts\\partypulse\\src\\pages\\onboarding.tsx||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:artifacts\\partypulse\\src\\pages\\onboarding.tsx||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
     },
@@ -18,7 +30,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 1,
+          "SelectedChildIndex": 3,
           "Children": [
             {
               "$type": "Bookmark",
@@ -26,20 +38,59 @@
             },
             {
               "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "main.tsx",
+              "DocumentMoniker": "C:\\Users\\athar\\source\\repos\\PartyPulse\\artifacts\\partypulse\\src\\main.tsx",
+              "RelativeDocumentMoniker": "artifacts\\partypulse\\src\\main.tsx",
+              "ToolTip": "C:\\Users\\athar\\source\\repos\\PartyPulse\\artifacts\\partypulse\\src\\main.tsx",
+              "RelativeToolTip": "artifacts\\partypulse\\src\\main.tsx",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
+              "WhenOpened": "2026-05-09T17:43:42.295Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "App.tsx",
+              "DocumentMoniker": "C:\\Users\\athar\\source\\repos\\PartyPulse\\artifacts\\partypulse\\src\\App.tsx",
+              "RelativeDocumentMoniker": "artifacts\\partypulse\\src\\App.tsx",
+              "ToolTip": "C:\\Users\\athar\\source\\repos\\PartyPulse\\artifacts\\partypulse\\src\\App.tsx",
+              "RelativeToolTip": "artifacts\\partypulse\\src\\App.tsx",
+              "ViewState": "AgIAAA0AAAAAAAAAAAAwwBYAAABTAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
+              "WhenOpened": "2026-05-09T17:43:11.779Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
               "DocumentIndex": 0,
+              "Title": "home.tsx",
+              "DocumentMoniker": "C:\\Users\\athar\\source\\repos\\PartyPulse\\artifacts\\partypulse\\src\\pages\\home.tsx",
+              "RelativeDocumentMoniker": "artifacts\\partypulse\\src\\pages\\home.tsx",
+              "ToolTip": "C:\\Users\\athar\\source\\repos\\PartyPulse\\artifacts\\partypulse\\src\\pages\\home.tsx*",
+              "RelativeToolTip": "artifacts\\partypulse\\src\\pages\\home.tsx*",
+              "ViewState": "AgIAAA8AAAAAAAAAAAAAADcBAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
+              "WhenOpened": "2026-05-09T17:36:19.318Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
               "Title": "onboarding.tsx",
               "DocumentMoniker": "C:\\Users\\athar\\source\\repos\\PartyPulse\\artifacts\\partypulse\\src\\pages\\onboarding.tsx",
               "RelativeDocumentMoniker": "artifacts\\partypulse\\src\\pages\\onboarding.tsx",
               "ToolTip": "C:\\Users\\athar\\source\\repos\\PartyPulse\\artifacts\\partypulse\\src\\pages\\onboarding.tsx",
               "RelativeToolTip": "artifacts\\partypulse\\src\\pages\\onboarding.tsx",
-              "ViewState": "AgIAADQAAAAAAAAAAADwv0kAAAAoAAAAAAAAAA==",
+              "ViewState": "AgIAAFYAAAAAAAAAAAAAwH0AAAAWAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
               "WhenOpened": "2026-05-08T11:31:51.132Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 4,
               "Title": "login.tsx",
               "DocumentMoniker": "C:\\Users\\athar\\source\\repos\\PartyPulse\\artifacts\\partypulse\\src\\pages\\login.tsx",
               "RelativeDocumentMoniker": "artifacts\\partypulse\\src\\pages\\login.tsx",
@@ -47,12 +98,7 @@
               "RelativeToolTip": "artifacts\\partypulse\\src\\pages\\login.tsx",
               "ViewState": "AgIAAKMAAAAAAAAAAADwv8sAAAAJAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-05-08T11:13:05.949Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{1c4feeaa-4718-4aa9-859d-94ce25d182ba}"
+              "WhenOpened": "2026-05-08T11:13:05.949Z"
             }
           ]
         }
