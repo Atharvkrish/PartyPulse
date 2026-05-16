@@ -3,11 +3,10 @@ import {
   setDoc,
   getDoc,
   collection,
-  query,
-  where,
   getDocs,
   onSnapshot,
   serverTimestamp,
+  updateDoc,
 } from "firebase/firestore";
 import { db } from "./firebase";
 
@@ -16,6 +15,7 @@ export interface AppUser {
   displayName: string;
   email: string;
   friends: string[];
+  photoURL?: string;
   createdAt: unknown;
 }
 
@@ -23,17 +23,14 @@ export async function upsertUser(uid: string, displayName: string, email: string
   const ref = doc(db, "users", uid);
   const snap = await getDoc(ref);
   if (!snap.exists()) {
-    await setDoc(ref, {
-      uid,
-      displayName,
-      email,
-      friends: [],
-      createdAt: serverTimestamp(),
-    });
+    await setDoc(ref, { uid, displayName, email, friends: [], createdAt: serverTimestamp() });
   } else {
-    // Update name/email in case they changed
     await setDoc(ref, { displayName, email }, { merge: true });
   }
+}
+
+export async function updateUserPhoto(uid: string, photoURL: string) {
+  await updateDoc(doc(db, "users", uid), { photoURL });
 }
 
 export async function getAppUser(uid: string): Promise<AppUser | null> {
@@ -50,16 +47,14 @@ export function subscribeUser(uid: string, cb: (user: AppUser | null) => void) {
 
 export async function searchUsers(term: string, currentUid: string): Promise<AppUser[]> {
   if (!term.trim()) return [];
-  const lower = term.toLowerCase();
-  // Firestore doesn't support full-text search; fetch up to 50 users and filter client-side
+  const lower = term.trim().toLowerCase();
   const snap = await getDocs(collection(db, "users"));
   return snap.docs
     .map((d) => d.data() as AppUser)
     .filter(
       (u) =>
         u.uid !== currentUid &&
-        (u.displayName?.toLowerCase().includes(lower) ||
-          u.email?.toLowerCase().includes(lower))
+        (u.displayName?.toLowerCase().includes(lower) || u.email?.toLowerCase().includes(lower))
     )
     .slice(0, 20);
 }

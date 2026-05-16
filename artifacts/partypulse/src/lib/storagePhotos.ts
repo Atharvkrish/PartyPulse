@@ -3,7 +3,6 @@ import {
   uploadBytesResumable,
   getDownloadURL,
   deleteObject,
-  listAll,
 } from "firebase/storage";
 import {
   collection,
@@ -27,14 +26,8 @@ export interface EventPhoto {
   createdAt: Timestamp;
 }
 
-export function subscribePhotos(
-  eventId: string,
-  cb: (photos: EventPhoto[]) => void
-) {
-  const q = query(
-    collection(db, "events", eventId, "photos"),
-    orderBy("createdAt", "desc")
-  );
+export function subscribePhotos(eventId: string, cb: (photos: EventPhoto[]) => void) {
+  const q = query(collection(db, "events", eventId, "photos"), orderBy("createdAt", "desc"));
   return onSnapshot(q, (snap) => {
     cb(snap.docs.map((d) => ({ id: d.id, ...d.data() } as EventPhoto)));
   });
@@ -51,21 +44,14 @@ export function uploadEventPhoto(
     const storagePath = `events/${eventId}/photos/${Date.now()}_${file.name}`;
     const storageRef = ref(storage, storagePath);
     const task = uploadBytesResumable(storageRef, file);
-
     task.on(
       "state_changed",
-      (snap) => {
-        onProgress(Math.round((snap.bytesTransferred / snap.totalBytes) * 100));
-      },
+      (snap) => onProgress(Math.round((snap.bytesTransferred / snap.totalBytes) * 100)),
       reject,
       async () => {
         const url = await getDownloadURL(task.snapshot.ref);
         await addDoc(collection(db, "events", eventId, "photos"), {
-          url,
-          uploaderId: userId,
-          uploaderName: userName,
-          storagePath,
-          createdAt: serverTimestamp(),
+          url, uploaderId: userId, uploaderName: userName, storagePath, createdAt: serverTimestamp(),
         });
         resolve(url);
       }
@@ -82,26 +68,27 @@ export async function uploadEventCover(
     const storagePath = `events/${eventId}/cover_${Date.now()}_${file.name}`;
     const storageRef = ref(storage, storagePath);
     const task = uploadBytesResumable(storageRef, file);
-
     task.on(
       "state_changed",
-      (snap) => {
-        onProgress(Math.round((snap.bytesTransferred / snap.totalBytes) * 100));
-      },
+      (snap) => onProgress(Math.round((snap.bytesTransferred / snap.totalBytes) * 100)),
       reject,
-      async () => {
-        const url = await getDownloadURL(task.snapshot.ref);
-        resolve(url);
-      }
+      async () => { resolve(await getDownloadURL(task.snapshot.ref)); }
     );
   });
 }
 
-export async function deletePhoto(
-  eventId: string,
-  photoId: string,
-  storagePath: string
-) {
+export async function uploadProfilePhoto(uid: string, file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const storagePath = `users/${uid}/profile.jpg`;
+    const storageRef = ref(storage, storagePath);
+    const task = uploadBytesResumable(storageRef, file);
+    task.on("state_changed", () => {}, reject, async () => {
+      resolve(await getDownloadURL(task.snapshot.ref));
+    });
+  });
+}
+
+export async function deletePhoto(eventId: string, photoId: string, storagePath: string) {
   await deleteObject(ref(storage, storagePath));
   await deleteDoc(doc(db, "events", eventId, "photos", photoId));
 }

@@ -1,0 +1,101 @@
+I have a React + Vite + Firebase app called PartyPulse. Please implement all of the following features and fixes:
+
+---
+
+## 1. FIX: Location picker on Create Event & Edit Event
+- Add a text search box above the map on both create-event.tsx and edit-event.tsx
+- When the user types an address, use Nominatim API to show a dropdown of results
+- When they pick a result from the dropdown, the map should FLY/PAN to that location and drop the pin there automatically
+- Also keep the ability to click the map manually to place a pin
+- Make the whole location section feel easy and intuitive
+
+---
+
+## 2. FIX: RSVP not working
+- Debug and fix the RSVP / "Going" button on event-detail.tsx
+- It should correctly add/remove the user's uid from the event's going array in Firestore
+- Show correct "Going" count and toggle state based on whether user.uid is in the going array
+
+---
+
+## 3. FIX: Find Friend / Search Friends not working
+- Fix the friend search so it works by typing just a first name
+- The search should be case-insensitive and match partial names (e.g. typing "ali" should find "Alice")
+- Currently searches only exact matches — fix this so it searches displayName as a prefix or substring match
+- Results should show instantly as the user types (debounced)
+
+---
+
+## 4. NEW FEATURE: Add friends directly from event group chat
+- In the event chat / group chat screen, next to each message from another user, add a small "Add Friend" button (person+ icon)
+- Clicking it sends a friend request or directly adds them as a friend (whichever the app currently supports)
+- If they are already a friend, show a checkmark instead
+
+---
+
+## 5. NEW FEATURE: Profile photo upload
+- On the profile page, let users tap their avatar to upload a profile photo
+- Store the photo in Firebase Storage under users/{uid}/profile.jpg
+- Save the photoURL to the user's Firestore document
+- Display the photo as a circular avatar everywhere the user's initials currently show (header, chat, event cards)
+
+---
+
+## 6. NEW FEATURE: Seed realistic events in specific cities
+Please add at least 3-5 seed events in EACH of these locations with realistic titles, descriptions, categories, dates and times. Use real street addresses and correct lat/lng coordinates:
+- Dublin, Ireland
+- Cork, Ireland
+- Galway, Ireland
+- Limerick, Ireland
+- Mumbai, India
+- Delhi, India
+- Indore, India
+
+Use a seed script or add them directly via a Firebase admin call or a one-time seeding function that runs on app load if no events exist. Events should have varied categories (Club Night, Birthday Party, House Party, Festival, etc.)
+
+---
+
+## 7. NEW FEATURE: Event Recommendations
+- On the home feed/map, show a "For You" section or badge on events that match the user's most attended categories
+- Track which categories the user RSVPs to and suggest similar events
+
+---
+
+## 8. NEW FEATURE: Event Countdown
+- On the event detail page, show a live countdown timer (days, hours, minutes) to the event start time
+
+---
+
+## 9. NEW FEATURE: Share Event
+- On the event detail page, add a Share button
+- On mobile it should trigger the native share sheet (navigator.share)
+- On desktop copy the event link to clipboard and show a toast confirmation
+
+---
+
+## 10. NEW FEATURE: Notifications bell
+- Add a bell icon in the header on the home page
+- Show a red dot if there are unread activity notifications
+- Tapping it opens a slide-up panel showing recent activity (friend joined your event, new RSVP, friend request etc.)
+
+---
+
+## 11. NEW FEATURE: Dark/Light mode toggle
+- Add a toggle in the profile page to switch between dark and light mode
+- Persist the preference in localStorage
+
+---
+
+## 12. NEW FEATURE: Event Check-in
+- When an event's date and time is within 2 hours, show a "Check In" button on the event detail page
+- Checking in adds the user to a checkedIn array in Firestore and shows a count of who has checked in
+
+---
+
+## IMPORTANT NOTES FOR REPLIT:
+- Do NOT break any existing functionality
+- Keep all existing Firebase config, auth, and Firestore structure intact
+- Use Nominatim (https://nominatim.openstreetmap.org) for all geocoding — no API key needed
+- Use existing Tailwind classes and the existing dark theme
+- All new Firestore fields should be backward compatible (optional fields with fallbacks)
+- Test that the app builds without TypeScript errors before finishing

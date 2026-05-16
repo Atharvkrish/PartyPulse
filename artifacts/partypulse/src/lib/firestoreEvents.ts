@@ -14,7 +14,6 @@ import {
   where,
   arrayUnion,
   arrayRemove,
-  increment,
 } from "firebase/firestore";
 import { db } from "./firebase";
 
@@ -38,18 +37,24 @@ export interface Event {
   interested: string[];
   cantGo: string[];
   bannedUsers: string[];
+  checkedIn?: string[];
+  isExternal?: boolean;
+  externalUrl?: string;
   createdAt: Timestamp;
 }
 
 export type RsvpStatus = "going" | "interested" | "cantGo";
 
-export async function createEvent(data: Omit<Event, "id" | "createdAt" | "going" | "interested" | "cantGo" | "bannedUsers">) {
+export async function createEvent(
+  data: Omit<Event, "id" | "createdAt" | "going" | "interested" | "cantGo" | "bannedUsers" | "checkedIn">
+) {
   const ref = await addDoc(collection(db, "events"), {
     ...data,
     going: [],
     interested: [],
     cantGo: [],
     bannedUsers: [],
+    checkedIn: [],
     createdAt: serverTimestamp(),
   });
   return ref.id;
@@ -89,15 +94,15 @@ export async function setRsvp(
 ) {
   const ref = doc(db, "events", eventId);
   const updates: Record<string, unknown> = {};
+  if (prevStatus) updates[prevStatus] = arrayRemove(userId);
+  if (status) updates[status] = arrayUnion(userId);
+  if (Object.keys(updates).length > 0) await updateDoc(ref, updates);
+}
 
-  if (prevStatus) {
-    updates[prevStatus] = arrayRemove(userId);
-  }
-  if (status) {
-    updates[status] = arrayUnion(userId);
-  }
-
-  await updateDoc(ref, updates);
+export async function checkIn(eventId: string, userId: string) {
+  await updateDoc(doc(db, "events", eventId), {
+    checkedIn: arrayUnion(userId),
+  });
 }
 
 export async function deleteEvent(eventId: string) {
@@ -112,13 +117,9 @@ export async function updateEvent(
 }
 
 export async function banUser(eventId: string, userId: string) {
-  await updateDoc(doc(db, "events", eventId), {
-    bannedUsers: arrayUnion(userId),
-  });
+  await updateDoc(doc(db, "events", eventId), { bannedUsers: arrayUnion(userId) });
 }
 
 export async function unbanUser(eventId: string, userId: string) {
-  await updateDoc(doc(db, "events", eventId), {
-    bannedUsers: arrayRemove(userId),
-  });
+  await updateDoc(doc(db, "events", eventId), { bannedUsers: arrayRemove(userId) });
 }

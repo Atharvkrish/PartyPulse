@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useLocation, useParams } from "wouter";
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-leaflet";
 import L from "leaflet";
@@ -15,17 +15,23 @@ delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIcon
 L.Icon.Default.mergeOptions({ iconUrl, iconRetinaUrl, shadowUrl });
 
 interface LatLng { lat: number; lng: number }
+interface NominatimResult { display_name: string; lat: string; lon: string }
 
 function LocationPicker({ onPick }: { onPick: (ll: LatLng) => void }) {
-    useMapEvents({
-        click(e) { onPick({ lat: e.latlng.lat, lng: e.latlng.lng }); },
-    });
+    useMapEvents({ click(e) { onPick({ lat: e.latlng.lat, lng: e.latlng.lng }); } });
     return null;
 }
 
-function RecenterMap({ center }: { center: LatLng }) {
+function FlyToLocation({ target }: { target: LatLng | null }) {
     const map = useMap();
-    useEffect(() => { map.setView([center.lat, center.lng], 14); }, []);
+    const prevRef = useRef<string>("");
+    if (target) {
+        const key = `${target.lat},${target.lng}`;
+        if (key !== prevRef.current) {
+            prevRef.current = key;
+            map.flyTo([target.lat, target.lng], 15, { animate: true, duration: 0.6 });
+        }
+    }
     return null;
 }
 
@@ -43,11 +49,14 @@ export default function EditEvent() {
     const [maxAttendees, setMaxAttendees] = useState("");
     const [category, setCategory] = useState("");
     const [pickedLocation, setPickedLocation] = useState<LatLng | null>(null);
+    const [flyTarget, setFlyTarget] = useState<LatLng | null>(null);
     const [address, setAddress] = useState("");
     const [locationSearchInput, setLocationSearchInput] = useState("");
-    const [locationResults, setLocationResults] = useState<{ display_name: string; lat: string; lon: string }[]>([]);
+    const [locationResults, setLocationResults] = useState<NominatimResult[]>([]);
+    const [searchingLocation, setSearchingLocation] = useState(false);
     const [loading, setLoading] = useState(false);
     const [fetching, setFetching] = useState(true);
+    const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
         if (!eventId) return;
@@ -61,7 +70,9 @@ export default function EditEvent() {
             setTime(ev.time);
             setMaxAttendees(ev.maxAttendees?.toString() ?? "");
             setCategory(ev.category ?? "");
-            setPickedLocation({ lat: ev.location.lat, lng: ev.location.lng });
+            const ll = { lat: ev.location.lat, lng: ev.location.lng };
+            setPickedLocation(ll);
+            setFlyTarget(ll);
             setAddress(ev.location.address);
             setLocationSearchInput(ev.location.address);
             setFetching(false);
@@ -70,10 +81,9 @@ export default function EditEvent() {
 
     const handlePickLocation = useCallback(async (ll: LatLng) => {
         setPickedLocation(ll);
+        setFlyTarget(ll);
         try {
-            const res = await fetch(
-                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${ll.lat}&lon=${ll.lng}`
-            );
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${ll.lat}&lon=${ll.lng}`, { headers: { "Accept-Language": "en" } });
             const data = await res.json();
             const name = data.display_name || `${ll.lat.toFixed(4)}, ${ll.lng.toFixed(4)}`;
             setAddress(name);
@@ -83,13 +93,18 @@ export default function EditEvent() {
         }
     }, []);
 
-    async function searchLocation(query: string) {
-        if (!query.trim()) { setLocationResults([]); return; }
-        const res = await fetch(
-            `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=4`
-        );
-        const data = await res.json();
-        setLocationResults(data);
+    function handleLocationInput(val: string) {
+        setLocationSearchInput(val);
+        if (searchTimeout.current) clearTimeout(searchTimeout.current);
+        if (!val.trim()) { setLocationResults([]); return; }
+        searchTimeout.current = setTimeout(async () => {
+            setSearchingLocation(true);
+            try {
+                const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(val)}&format=json&limit=5`, { headers: { "Accept-Language": "en" } });
+                setLocationResults(await res.json());
+            } catch { setLocationResults([]); }
+            finally { setSearchingLocation(false); }
+        }, 400);
     }
 
     async function handleSubmit(e: React.FormEvent) {
@@ -98,10 +113,7 @@ export default function EditEvent() {
         setLoading(true);
         try {
             await updateEvent(eventId, {
-                title,
-                description,
-                date,
-                time,
+                title, description, date, time,
                 category: category || undefined,
                 location: { lat: pickedLocation.lat, lng: pickedLocation.lng, address },
                 maxAttendees: maxAttendees ? parseInt(maxAttendees) : undefined,
@@ -110,65 +122,35 @@ export default function EditEvent() {
             setLocation(`/events/${eventId}`);
         } catch (err: unknown) {
             toast({ title: "Error", description: (err as Error).message, variant: "destructive" });
-        } finally {
-            setLoading(false);
-        }
+        } finally { setLoading(false); }
     }
 
     if (fetching) {
-        return (
-            <div className="min-h-screen bg-background flex items-center justify-center">
-                <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-            </div>
-        );
+        return <div className="min-h-screen bg-background flex items-center justify-center"><div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>;
     }
 
+    void original;
     const mapCenter = pickedLocation ?? { lat: 53.3498, lng: -6.2603 };
-
-    const inputCls =
-        "w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary";
+    const inputCls = "w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary";
 
     return (
         <div className="min-h-screen bg-background text-foreground pb-8">
             <div className="max-w-2xl mx-auto px-4">
                 <div className="flex items-center gap-3 pt-6 mb-6">
-                    <button
-                        data-testid="button-back"
-                        onClick={() => setLocation(`/events/${eventId}`)}
-                        className="text-muted-foreground hover:text-foreground text-sm"
-                    >
-                        &larr; Back
-                    </button>
+                    <button data-testid="button-back" onClick={() => setLocation(`/events/${eventId}`)} className="text-muted-foreground hover:text-foreground text-sm">&larr; Back</button>
                     <h1 className="text-xl font-bold">Edit Event</h1>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-5">
                     <div>
                         <label className="block text-xs font-medium text-muted-foreground mb-1">Title *</label>
-                        <input
-                            data-testid="input-title"
-                            type="text"
-                            value={title}
-                            onChange={(e) => setTitle(e.target.value)}
-                            required
-                            className={inputCls}
-                            placeholder="What's the event?"
-                        />
+                        <input data-testid="input-title" type="text" value={title} onChange={(e) => setTitle(e.target.value)} required className={inputCls} placeholder="What's the event?" />
                     </div>
-
                     <div>
                         <label className="block text-xs font-medium text-muted-foreground mb-1">Description</label>
-                        <textarea
-                            data-testid="input-description"
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                            rows={3}
-                            className={`${inputCls} resize-none`}
-                            placeholder="Tell people what to expect..."
-                        />
+                        <textarea data-testid="input-description" value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className={`${inputCls} resize-none`} placeholder="Tell people what to expect..." />
                     </div>
 
-                    {/* Category */}
                     <div>
                         <label className="block text-xs font-medium text-muted-foreground mb-2">Category</label>
                         <div className="grid grid-cols-5 gap-2">
@@ -176,14 +158,8 @@ export default function EditEvent() {
                                 const meta = CATEGORY_META[cat];
                                 const active = category === cat;
                                 return (
-                                    <button
-                                        key={cat}
-                                        type="button"
-                                        data-testid={`cat-${cat}`}
-                                        onClick={() => setCategory(active ? "" : cat)}
-                                        className={`flex flex-col items-center gap-1 p-2 rounded-xl border text-xs font-medium transition-all ${active ? meta.active : "border-border text-muted-foreground hover:border-primary/40"
-                                            }`}
-                                    >
+                                    <button key={cat} type="button" data-testid={`cat-${cat}`} onClick={() => setCategory(active ? "" : cat)}
+                                        className={`flex flex-col items-center gap-1 p-2 rounded-xl border text-xs font-medium transition-all ${active ? meta.active : "border-border text-muted-foreground hover:border-primary/40"}`}>
                                         <span className="text-base">{meta.emoji}</span>
                                         <span className="leading-tight text-center text-[10px]">{cat}</span>
                                     </button>
@@ -195,105 +171,61 @@ export default function EditEvent() {
                     <div className="grid grid-cols-2 gap-3">
                         <div>
                             <label className="block text-xs font-medium text-muted-foreground mb-1">Date *</label>
-                            <input
-                                data-testid="input-date"
-                                type="date"
-                                value={date}
-                                onChange={(e) => setDate(e.target.value)}
-                                required
-                                className={inputCls}
-                            />
+                            <input data-testid="input-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required className={inputCls} />
                         </div>
                         <div>
                             <label className="block text-xs font-medium text-muted-foreground mb-1">Time *</label>
-                            <input
-                                data-testid="input-time"
-                                type="time"
-                                value={time}
-                                onChange={(e) => setTime(e.target.value)}
-                                required
-                                className={inputCls}
-                            />
+                            <input data-testid="input-time" type="time" value={time} onChange={(e) => setTime(e.target.value)} required className={inputCls} />
                         </div>
                     </div>
 
                     <div>
-                        <label className="block text-xs font-medium text-muted-foreground mb-1">
-                            Max Attendees (optional)
-                        </label>
-                        <input
-                            data-testid="input-max-attendees"
-                            type="number"
-                            value={maxAttendees}
-                            onChange={(e) => setMaxAttendees(e.target.value)}
-                            min={1}
-                            className={inputCls}
-                            placeholder="Leave blank for unlimited"
-                        />
+                        <label className="block text-xs font-medium text-muted-foreground mb-1">Max Attendees (optional)</label>
+                        <input data-testid="input-max-attendees" type="number" value={maxAttendees} onChange={(e) => setMaxAttendees(e.target.value)} min={1} className={inputCls} placeholder="Leave blank for unlimited" />
                     </div>
 
-                    {/* Location */}
                     <div>
-                        <label className="block text-xs font-medium text-muted-foreground mb-1">
-                            Location — type to search or click the map
-                        </label>
-
-                        {/* Text search */}
+                        <label className="block text-xs font-medium text-muted-foreground mb-1">Location — search or click the map</label>
                         <div className="relative mb-2">
-                            <input
-                                type="text"
-                                value={locationSearchInput}
-                                onChange={(e) => { setLocationSearchInput(e.target.value); searchLocation(e.target.value); }}
-                                placeholder="Search for an address or place…"
-                                className={inputCls}
-                            />
+                            <input type="text" value={locationSearchInput} onChange={(e) => handleLocationInput(e.target.value)} placeholder="Search for an address or place…" className={inputCls} autoComplete="off" />
+                            {searchingLocation && (
+                                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                    <div className="w-3 h-3 border border-primary border-t-transparent rounded-full animate-spin" />
+                                </div>
+                            )}
                             {locationResults.length > 0 && (
                                 <div className="absolute left-0 right-0 top-full bg-card border border-border rounded-lg shadow-lg z-[1000] mt-1 overflow-hidden">
                                     {locationResults.map((r, i) => (
-                                        <button
-                                            key={i}
-                                            type="button"
-                                            className="w-full text-left px-3 py-2 text-sm hover:bg-accent truncate border-b border-border last:border-0"
+                                        <button key={i} type="button"
+                                            className="w-full text-left px-3 py-2.5 text-sm hover:bg-accent border-b border-border last:border-0"
                                             onClick={() => {
-                                                const lat = parseFloat(r.lat);
-                                                const lng = parseFloat(r.lon);
+                                                const lat = parseFloat(r.lat), lng = parseFloat(r.lon);
                                                 setPickedLocation({ lat, lng });
+                                                setFlyTarget({ lat, lng });
                                                 setAddress(r.display_name);
                                                 setLocationSearchInput(r.display_name);
                                                 setLocationResults([]);
-                                            }}
-                                        >
-                                            📍 {r.display_name}
+                                            }}>
+                                            📍 <span className="text-xs">{r.display_name}</span>
                                         </button>
                                     ))}
                                 </div>
                             )}
                         </div>
 
-                        {/* Map */}
-                        <div className="rounded-xl overflow-hidden border border-border" style={{ height: 220 }}>
-                            <MapContainer
-                                center={[mapCenter.lat, mapCenter.lng]}
-                                zoom={14}
-                                style={{ height: "100%", width: "100%" }}
-                            >
+                        <div className="rounded-xl overflow-hidden border border-border" style={{ height: 240 }}>
+                            <MapContainer center={[mapCenter.lat, mapCenter.lng]} zoom={14} style={{ height: "100%", width: "100%" }}>
                                 <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                                <RecenterMap center={mapCenter} />
+                                <FlyToLocation target={flyTarget} />
                                 <LocationPicker onPick={handlePickLocation} />
-                                {pickedLocation && (
-                                    <Marker position={[pickedLocation.lat, pickedLocation.lng]} />
-                                )}
+                                {pickedLocation && <Marker position={[pickedLocation.lat, pickedLocation.lng]} />}
                             </MapContainer>
                         </div>
                         {address && <p className="mt-1.5 text-xs text-muted-foreground truncate">📍 {address}</p>}
                     </div>
 
-                    <button
-                        data-testid="button-submit"
-                        type="submit"
-                        disabled={loading || !title || !date || !time || !pickedLocation}
-                        className="w-full bg-primary text-primary-foreground font-semibold py-3 rounded-xl hover:opacity-90 disabled:opacity-50 transition-all"
-                    >
+                    <button data-testid="button-submit" type="submit" disabled={loading || !title || !date || !time || !pickedLocation}
+                        className="w-full bg-primary text-primary-foreground font-semibold py-3 rounded-xl hover:opacity-90 disabled:opacity-50 transition-all">
                         {loading ? "Saving…" : "Save Changes"}
                     </button>
                 </form>

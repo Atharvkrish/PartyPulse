@@ -128,6 +128,31 @@
   --destructive-foreground: 0 0% 98%;
 }
 
+/* Light mode override */
+.light {
+  --background: 0 0% 98%;
+  --foreground: 240 10% 8%;
+  --border: 240 10% 82%;
+  --input: 240 10% 90%;
+  --ring: 262 83% 58%;
+  --card: 0 0% 100%;
+  --card-foreground: 240 10% 8%;
+  --card-border: 240 10% 85%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 240 10% 8%;
+  --popover-border: 240 10% 85%;
+  --primary: 262 83% 52%;
+  --primary-foreground: 0 0% 98%;
+  --secondary: 240 10% 94%;
+  --secondary-foreground: 240 10% 8%;
+  --muted: 240 10% 94%;
+  --muted-foreground: 240 5% 42%;
+  --accent: 262 83% 52%;
+  --accent-foreground: 0 0% 98%;
+  --destructive: 0 84% 55%;
+  --destructive-foreground: 0 0% 98%;
+}
+
 @layer base {
   * {
     @apply border-border;

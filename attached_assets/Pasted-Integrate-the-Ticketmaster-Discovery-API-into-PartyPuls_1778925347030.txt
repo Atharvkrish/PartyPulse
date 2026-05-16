@@ -1,0 +1,109 @@
+Integrate the Ticketmaster Discovery API into PartyPulse to show real live events on the map alongside user-created events. Here is exactly what to do:
+
+---
+
+## SETUP
+
+1. Install nothing new — use native fetch() for all API calls
+2. The Ticketmaster API base URL is: https://app.ticketmaster.com/discovery/v2/
+3. Store the API key in the .env file as: VITE_TICKETMASTER_API_KEY=your_key_here
+4. Get a free API key from https://developer.ticketmaster.com (tell the user to add their own key)
+
+---
+
+## CREATE A NEW FILE: src/lib/ticketmaster.ts
+
+This file should:
+- Export a function called fetchTicketmasterEvents(lat: number, lng: number, radiusKm: number)
+- Call the Ticketmaster API endpoint: /events.json
+- Pass these params:
+  - apikey: the env variable
+  - latlong: `${lat},${lng}`
+  - radius: radiusKm (convert to miles for the API: multiply km by 0.621)
+  - unit: miles
+  - size: 50
+  - sort: date,asc
+- Map the response to the same Event interface used in firestoreEvents.ts so they work everywhere in the app
+- For each Ticketmaster event, map the fields like this:
+  - id: "tm_" + event.id (prefix with tm_ so we know it's from Ticketmaster)
+  - title: event.name
+  - description: event.info || event.pleaseNote || ""
+  - date: event.dates.start.localDate
+  - time: event.dates.start.localTime || "00:00"
+  - location.lat: event._embedded.venues[0].location.latitude (parse as float)
+  - location.lng: event._embedded.venues[0].location.longitude (parse as float)
+  - location.address: event._embedded.venues[0].name + ", " + event._embedded.venues[0].city.name
+  - imageUrl: event.images[0]?.url || ""
+  - going: [] (empty array as default)
+  - creatorId: "ticketmaster"
+  - creatorName: "Ticketmaster"
+  - category: map the Ticketmaster segment/genre to the closest PartyPulse category:
+      - Music → Club Night
+      - Arts & Theatre → Social
+      - Sports → Social
+      - Family → Social
+      - default → Party
+  - isExternal: true (add this field to distinguish from user events)
+  - externalUrl: event.url (link to buy tickets)
+
+- Handle errors gracefully — if the API fails or returns no results, return an empty array silently
+
+---
+
+## UPDATE: src/pages/home.tsx
+
+- Import fetchTicketmasterEvents from @/lib/ticketmaster
+- Add state: const [tmEvents, setTmEvents] = useState<Event[]>([])
+- When userCoords are set (either from geolocation or manual location setter), call fetchTicketmasterEvents(userCoords.lat, userCoords.lng, 25) and store results in tmEvents
+- Also call it when the map stops moving (use the moveend event on the map) with the new map center
+- Combine user events and Ticketmaster events: const allEvents = [...events, ...tmEvents]
+- Use allEvents everywhere instead of events for the map markers and the slide-up panel
+- For Ticketmaster markers use a different colour — use #6366f1 (indigo) so users can tell them apart
+- In the event card in the slide-up panel, if event.isExternal is true:
+  - Show a small "TM" badge in indigo next to the event title
+  - When clicked, open event.externalUrl in a new tab instead of navigating to /events/:id
+
+---
+
+## UPDATE: src/pages/home.tsx — map legend
+
+Add a small legend in the bottom left of the map (above the slide-up panel) showing:
+- 🟣 Indigo dot = Ticketmaster event
+- 🔴 Red/Amber/Green dot = PartyPulse event
+Keep it small, just two lines of tiny text on a semi-transparent card
+
+---
+
+## UPDATE: EventFilterSheet
+
+- Add a toggle/switch called "Show Ticketmaster Events" (default: on)
+- When toggled off, filter out all events where isExternal is true
+- When toggled on, show them again
+
+---
+
+## CITIES TO PRELOAD
+
+On first load, even before the user sets their location, fetch Ticketmaster events for these cities and show them on the map so it does not look empty:
+- Dublin, Ireland (53.3498, -6.2603)
+- Cork, Ireland (51.8985, -8.4756)
+- Galway, Ireland (53.2707, -9.0568)
+- Limerick, Ireland (52.6638, -8.6267)
+- Mumbai, India (19.0760, 72.8777)
+- Delhi, India (28.6139, 77.2090)
+- Indore, India (22.7196, 75.8577)
+
+Fetch all of these in parallel using Promise.all() on app load and combine all results into tmEvents
+
+---
+
+## IMPORTANT NOTES
+
+- Ticketmaster events should NOT be saveable to Firestore — they are read only
+- Do not allow RSVP or chat on Ticketmaster events — if isExternal is true, the event detail page should show a "Get Tickets" button linking to externalUrl instead of the RSVP and chat sections
+- If the Ticketmaster API key is missing from .env, silently skip the fetch and show only user-created events — do not crash the app
+- Keep all existing functionality working
+- No TypeScript errors
+- The Event interface in firestoreEvents.ts needs these optional fields added:
+  - isExternal?: boolean
+  - externalUrl?: string

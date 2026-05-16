@@ -84,6 +84,7 @@ export interface FilterState {
   maxDistanceKm: number | null;
   capacityOnly: boolean;
   sortBy: SortBy;
+  showExternal: boolean;
 }
 
 export const DEFAULT_FILTERS: FilterState = {
@@ -95,6 +96,7 @@ export const DEFAULT_FILTERS: FilterState = {
   maxDistanceKm: null,
   capacityOnly: false,
   sortBy: "soonest",
+  showExternal: true,
 };
 
 // Haversine distance in km
@@ -197,6 +199,11 @@ export function applyFilters(
     );
   }
 
+  // External events (Ticketmaster)
+  if (!filters.showExternal) {
+    result = result.filter((e) => !e.isExternal);
+  }
+
   // Capacity left
   if (filters.capacityOnly) {
     result = result.filter(
@@ -245,5 +252,6 @@ export function countActiveFilters(filters: FilterState): number {
   if (filters.maxDistanceKm !== null) n++;
   if (filters.capacityOnly) n++;
   if (filters.sortBy !== "soonest") n++;
+  if (!filters.showExternal) n++;
   return n;
 }
