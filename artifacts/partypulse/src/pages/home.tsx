@@ -142,29 +142,16 @@ export default function Home() {
       .finally(() => setTmLoading(false));
   }, []);
 
-  // Seed events when Firestore is empty
-  useEffect(() => {
-    if (!user || seeded) return;
-    if (events.length === 0) return; // wait for initial load
-    // Check if truly empty (wait a moment for subscription to settle)
-    const timer = setTimeout(() => {
-      if (events.length === 0 && !seeded) {
-        setSeeded(true);
-        seedEventsIfEmpty(user.uid, 0).catch(() => { });
-      }
-    }, 2000);
-    return () => clearTimeout(timer);
-  }, [events.length, user, seeded]);
-
-  // Also trigger seed when events first load as 0 after user is present
+  // Seed 60+ events + dummy users when Firestore is empty.
+  // Waits 3 s for the real-time subscription to settle before checking the count.
   useEffect(() => {
     if (!user || seeded) return;
     const timer = setTimeout(() => {
       setSeeded(true);
-      seedEventsIfEmpty(user.uid, events.length).catch(() => { });
+      seedEventsIfEmpty(events.length).catch(console.error);
     }, 3000);
     return () => clearTimeout(timer);
-  }, [user]);
+  }, [user]); // only re-run when user changes, not on every events update
 
   // Geolocation
   useEffect(() => {

@@ -1,0 +1,74 @@
+I have a PartyPulse React + Firebase app. Current Firestore has only an `events` collection – no `users` or `friendRequests`. Find Friends and friend requests are broken.
+
+### 1. Fix authentication flow (create user documents)
+- When a user signs up (email/password), automatically create a document in `users` collection with:
+  - `uid` (string, same as Firebase Auth UID)
+  - `email` (string)
+  - `displayName` (string, from form or email prefix)
+  - `friends` (array, empty)
+  - `createdAt` (timestamp)
+- On login, check if user document exists; if not, create it.
+- Update security rules to allow users to read/write their own doc and read others (for search).
+
+### 2. Fix Find Friends search
+- Search users by `displayName` (case‑insensitive partial match) and `email` (exact match).
+- Display results with "Add Friend" button.
+- Implement `sendFriendRequest` that writes to `friendRequests` collection with:
+  - `from`, `to`, `status: "pending"`, `timestamp`.
+
+### 3. Seed a large number of events (40+ total)
+Create a script (or generate the code to add documents directly) that adds:
+
+#### 20+ events in major Indian cities:
+- Mumbai (5 events: club night, house party, Bollywood night, techno night, pool party)
+- Delhi (4 events: freshers, rooftop party, EDM night, reunion)
+- Bangalore (4 events: after‑work mixer, house party, silent disco, ladies night)
+- Kolkata (3 events: karaoke night, hip‑hop night, book launch party)
+- Chennai (3 events: Latin night, birthday bash, open mic)
+- Hyderabad (2 events: networking, themed party)
+- Pune (2 events: college farewell, retro night)
+- Plus 2 events in Goa (beach party, trance night)
+
+#### 20+ Gen‑Z realistic, quirky, small public events (mix of cities):
+Create events with these names:
+- "Dumping Him Party (Breakup Celebration)"
+- "Find a Man / Find a Woman Speed Dating"
+- "Wingman / Wingwoman Wanted Mixer"
+- "Ex‑Telling Stories (Therapeutic Roast)"
+- "Blind Date Challenge"
+- "Couple Up Game Night"
+- "Friendship Speed Dating (No Romance, Just Vibes)"
+- "Healing from Heartbreak – Coffee & Cookies"
+- "Puppy Yoga & Mingling"
+- "Cringe Confessions Party"
+- "Bring Your Bestie – Who Knows Who Better?"
+- "Tinder Profile Roast (Friendly & Private)"
+- "Anti‑Valentine’s Bash"
+- "Sitcom Trivia & Pizza"
+- "Make a New Friend in 5 Minutes"
+- "Breakup Photoshoot (Turn Pain into Vogue)"
+- "Random Roommate Match Night"
+- "Conspiracy Theories & Chill"
+- "Nostalgia 2000s Party (Barbie, Emo, Pop Punk)"
+- "Revenge Dress Party"
+- "Silent Book Club then Drinks"
+- "Karaoke for the Tonedeaf"
+
+Each event must have realistic:
+- title, description (fun, Gen‑Z tone)
+- date (spread over next 2 months)
+- location (actual venue names in that city, with lat/lng – approximate is fine)
+- category (choose from existing 25 categories or add "Social Mixer" / "Dating" if needed)
+- creatorId (use a dummy user ID, e.g., "system")
+- creatorName: "PartyPulse"
+- going array (random 3-20 dummy user IDs – you can create placeholder user docs for them)
+- interested array (random 5-30)
+- imageUrl (empty or a placeholder)
+- maxAttendees (10-100)
+- createdAt (current timestamp)
+
+Write the seed script as a Node.js function that can be run once (e.g., `node seedEvents.js`) or provide the exact Firestore JSON/documents that I can import manually. Include all necessary code and instructions.
+
+Ensure the script does not duplicate existing events and handles Firestore authentication (use Firebase Admin SDK or client SDK with service account).
+
+Finally, after seeding, the map should show many markers across India and the fun local events. Do not break existing features.

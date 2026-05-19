@@ -24,7 +24,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           u.uid,
           u.displayName || u.email || "Anonymous",
           u.email || u.phoneNumber || ""
-        ).catch(() => {});
+        ).catch((err) => console.error("[AuthContext] upsertUser failed:", err));
         // Init push notifications in background (won't block render)
         initFCM(u.uid).catch(() => {});
       }

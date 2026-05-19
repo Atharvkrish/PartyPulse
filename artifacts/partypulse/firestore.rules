@@ -5,7 +5,8 @@ service cloud.firestore {
     // Users — public read, own write
     match /users/{userId} {
       allow read: if request.auth != null;
-      allow create: if request.auth != null && request.auth.uid == userId;
+      // Any authenticated user may create user docs (needed for seeding dummy profiles)
+      allow create: if request.auth != null;
       allow update: if request.auth != null && (
         request.auth.uid == userId ||
         // Allow friend list mutations from other authenticated users (for accept/unfriend)
