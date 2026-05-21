@@ -1,13 +1,14 @@
 import type { Event } from "./firestoreEvents";
 import type { Timestamp } from "firebase/firestore";
 
-// ─── Ticketmaster Discovery API v2 ────────────────────────────────────────
-// Docs: https://developer.ticketmaster.com/products-and-docs/apis/discovery-api/v2/
-// Base URL (Production): https://app.ticketmaster.com/discovery/v2/
-// Auth: pass your key as the `apikey` query parameter — never in a header.
+// ─── Ticketmaster Discovery API — via server-side proxy ───────────────────
+//
+// All Ticketmaster calls go through /api/ticketmaster (a Vercel serverless
+// function) so the API key is never bundled into client JavaScript.
+//
+// The proxy endpoint:  GET /api/ticketmaster?latlong=<lat,lng>&radius=<miles>&size=<n>
+// The API key is read from process.env.TICKETMASTER_API_KEY on the server.
 // ──────────────────────────────────────────────────────────────────────────
-
-const TM_BASE_URL = "https://app.ticketmaster.com/discovery/v2";
 
 const SEGMENT_MAP: Record<string, string> = {
   "Music":          "Club Night",
@@ -57,7 +58,13 @@ type TmResponse = {
 // ─── Error types ──────────────────────────────────────────────────────────
 export class TicketmasterError extends Error {
   constructor(
-    public readonly code: "MISSING_KEY" | "INVALID_KEY" | "QUOTA_EXCEEDED" | "NOT_FOUND" | "SERVER_ERROR" | "NETWORK_ERROR",
+    public readonly code:
+      | "MISSING_KEY"
+      | "INVALID_KEY"
+      | "QUOTA_EXCEEDED"
+      | "NOT_FOUND"
+      | "SERVER_ERROR"
+      | "NETWORK_ERROR",
     message: string,
   ) {
     super(message);
@@ -65,111 +72,109 @@ export class TicketmasterError extends Error {
   }
 }
 
-function getApiKey(): string {
-  const key = import.meta.env.VITE_TICKETMASTER_API_KEY as string | undefined;
-  if (!key || key.trim() === "") {
-    throw new TicketmasterError(
-      "MISSING_KEY",
-      "VITE_TICKETMASTER_API_KEY is not set. " +
-      "Add it to your Replit Secrets (and to Vercel → Project → Settings → Environment Variables for production).",
-    );
-  }
-  return key.trim();
-}
-
-// ─── Core utility: fetchEventsFromTicketmaster ─────────────────────────────
-// Makes a single Discovery API request, logs the full URL + response,
-// and throws a typed TicketmasterError on any failure.
+// ─── Core: call the server-side proxy ─────────────────────────────────────
+// The proxy lives at /api/ticketmaster and forwards to Ticketmaster with
+// the key attached server-side. This avoids CORS and keeps the key secret.
 export async function fetchEventsFromTicketmaster(
-  params: Record<string, string | number>,
+  latlong: string,
+  radiusMiles: number,
+  size = 50,
 ): Promise<TmEvent[]> {
-  const apiKey = getApiKey();
+  const url =
+    `/api/ticketmaster` +
+    `?latlong=${encodeURIComponent(latlong)}` +
+    `&radius=${radiusMiles}` +
+    `&size=${size}`;
 
-  const qs = new URLSearchParams({
-    apikey: apiKey,
-    ...Object.fromEntries(Object.entries(params).map(([k, v]) => [k, String(v)])),
-  });
-
-  const url = `${TM_BASE_URL}/events.json?${qs.toString()}`;
-
-  // Log the full request URL (key visible in dev — remove in prod if desired)
-  console.group("[Ticketmaster] API request");
+  console.group("[Ticketmaster] Proxy request");
   console.log("URL:", url);
 
   let res: Response;
   try {
-    res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+    res = await fetch(url, { signal: AbortSignal.timeout(12_000) });
   } catch (err) {
     console.error("[Ticketmaster] Network error:", err);
     console.groupEnd();
-    throw new TicketmasterError("NETWORK_ERROR", `Network request failed: ${(err as Error).message}`);
+    throw new TicketmasterError(
+      "NETWORK_ERROR",
+      `Proxy request failed: ${(err as Error).message}`,
+    );
   }
 
   console.log("Status:", res.status, res.statusText);
 
-  // ── Handle HTTP error codes with specific messages ──────────────────────
   if (!res.ok) {
     let body = "";
     try { body = await res.text(); } catch { /* ignore */ }
     console.error("[Ticketmaster] Error body:", body);
     console.groupEnd();
 
+    if (res.status === 500) {
+      // Proxy server misconfiguration — key not set on Vercel
+      throw new TicketmasterError(
+        "MISSING_KEY",
+        "TICKETMASTER_API_KEY is not set on the server. " +
+        "Add it in Vercel → Project → Settings → Environment Variables.",
+      );
+    }
     if (res.status === 401) {
       throw new TicketmasterError(
         "INVALID_KEY",
-        "Invalid API Key (HTTP 401). " +
-        "Check that VITE_TICKETMASTER_API_KEY is the correct Production key from " +
-        "https://developer.ticketmaster.com/. Staging keys use a different base URL.",
+        "Invalid API key (HTTP 401). Verify TICKETMASTER_API_KEY in Vercel settings.",
       );
     }
     if (res.status === 403) {
       throw new TicketmasterError(
         "INVALID_KEY",
-        "API Key forbidden (HTTP 403). The key may be inactive, revoked, " +
-        "or not yet approved. Check your app status at developer.ticketmaster.com.",
+        "API key forbidden (HTTP 403). The key may be inactive or revoked.",
       );
     }
     if (res.status === 429) {
       throw new TicketmasterError(
         "QUOTA_EXCEEDED",
-        "Rate limit exceeded (HTTP 429). The free tier allows 5,000 requests/day. " +
-        "You have hit that limit — try again tomorrow or upgrade your plan.",
+        "Rate limit exceeded (HTTP 429). Free tier: 5,000 req/day. Try again tomorrow.",
       );
     }
     throw new TicketmasterError(
       "SERVER_ERROR",
-      `Ticketmaster returned HTTP ${res.status}: ${body.slice(0, 200)}`,
+      `Proxy returned HTTP ${res.status}: ${body.slice(0, 200)}`,
     );
   }
 
-  const data = await res.json() as TmResponse;
-  console.log("[Ticketmaster] Response:", JSON.stringify(data, null, 2).slice(0, 800));
+  const data = (await res.json()) as TmResponse;
+  console.log(
+    "[Ticketmaster] Response preview:",
+    JSON.stringify(data, null, 2).slice(0, 600),
+  );
   console.groupEnd();
 
-  // Some error responses come back as HTTP 200 with a fault object
+  // Some TM errors come back as HTTP 200 with a fault object
   if (data.fault) {
-    throw new TicketmasterError("INVALID_KEY", `Ticketmaster fault: ${data.fault.faultstring}`);
+    throw new TicketmasterError(
+      "INVALID_KEY",
+      `Ticketmaster fault: ${data.fault.faultstring}`,
+    );
   }
 
   const events = data._embedded?.events ?? [];
   if (events.length === 0) {
-    console.info("[Ticketmaster] No events found for the given parameters.");
+    console.info("[Ticketmaster] No events found for this location.");
   } else {
-    console.info(`[Ticketmaster] Found ${events.length} events (total: ${data.page?.totalElements ?? "?"}).`);
+    console.info(
+      `[Ticketmaster] ${events.length} events (total: ${data.page?.totalElements ?? "?"})`,
+    );
   }
 
   return events;
 }
 
-// ─── Map a raw TM event to our internal Event shape ───────────────────────
+// ─── Map a raw TM event → our internal Event shape ────────────────────────
 function mapTmEvent(e: TmEvent): Event | null {
   const venue = e._embedded?.venues?.[0];
   const loc = venue?.location;
   if (!loc?.latitude || !loc?.longitude) return null;
 
   const segment = e.classifications?.[0]?.segment?.name ?? "";
-
-  // Prefer a wide landscape image
   const bestImage = e.images?.sort((a, b) => b.width - a.width)[0];
 
   return {
@@ -206,17 +211,10 @@ export async function fetchTicketmasterEvents(
 ): Promise<Event[]> {
   const radiusMiles = Math.max(1, Math.round(radiusKm * 0.621371));
   try {
-    const raw = await fetchEventsFromTicketmaster({
-      latlong: `${lat},${lng}`,
-      radius: radiusMiles,
-      unit: "miles",
-      size: 50,
-      sort: "date,asc",
-    });
+    const raw = await fetchEventsFromTicketmaster(`${lat},${lng}`, radiusMiles, 50);
     return raw.map(mapTmEvent).filter(Boolean) as Event[];
   } catch (err) {
     if (err instanceof TicketmasterError) {
-      // Only log MISSING_KEY once — it will spam otherwise
       if (err.code !== "MISSING_KEY") {
         console.error(`[Ticketmaster] ${err.code}:`, err.message);
       }
@@ -232,16 +230,8 @@ export async function fetchTicketmasterForCities(
   cities: [number, number][],
   radiusKm = 20,
 ): Promise<Event[]> {
-  // Validate key up-front for a clear early error
-  try {
-    getApiKey();
-  } catch (err) {
-    if (err instanceof TicketmasterError && err.code === "MISSING_KEY") {
-      console.warn("[Ticketmaster]", err.message);
-      return [];
-    }
-    throw err;
-  }
+  // No up-front key check — the key lives on the server now.
+  // If the proxy returns a MISSING_KEY error it will be logged per-request.
 
   const results = await Promise.allSettled(
     cities.map(([lat, lng]) => fetchTicketmasterEvents(lat, lng, radiusKm)),
