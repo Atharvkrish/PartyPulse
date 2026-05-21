@@ -7,6 +7,7 @@ import {
   serverTimestamp,
   query,
   limit,
+  getCountFromServer,
 } from "firebase/firestore";
 import { db } from "./firebase";
 
@@ -566,63 +567,112 @@ const EVENTS: SeedEvent[] = [
   },
 ];
 
-// ─── Create dummy user documents so they appear in friend search ───────────
-async function seedDummyUsers(): Promise<void> {
+// ─── Create dummy user documents so they appear in friend search ──────────
+// Returns how many were successfully written (uses merge so it's idempotent).
+async function seedDummyUsers(): Promise<number> {
+  let created = 0;
   for (const u of DUMMY_USERS) {
-    const ref = doc(db, "users", u.uid);
-    await setDoc(ref, {
-      uid: u.uid,
-      displayName: u.displayName,
-      email: u.email,
-      friends: [],
+    try {
+      const ref = doc(db, "users", u.uid);
+      await setDoc(
+        ref,
+        { uid: u.uid, displayName: u.displayName, email: u.email, friends: [], createdAt: serverTimestamp() },
+        { merge: true },
+      );
+      created++;
+      await new Promise((r) => setTimeout(r, 30));
+    } catch (err) {
+      console.warn(`[Seed] Failed to create user ${u.displayName}:`, err);
+    }
+  }
+  return created;
+}
+
+// ─── Write a single event document ────────────────────────────────────────
+async function writeEvent(ev: SeedEvent): Promise<boolean> {
+  try {
+    await addDoc(collection(db, "events"), {
+      title: ev.title,
+      description: ev.description,
+      date: ev.date,
+      time: ev.time,
+      category: ev.category,
+      location: ev.location,
+      maxAttendees: ev.maxAttendees ?? null,
+      going: ev.going,
+      interested: ev.interested,
+      cantGo: [],
+      bannedUsers: [],
+      checkedIn: [],
+      creatorId: "system",
+      creatorName: "PartyPulse",
+      imageUrl: "",
       createdAt: serverTimestamp(),
-    }, { merge: true });
-    await new Promise((r) => setTimeout(r, 30));
+    });
+    return true;
+  } catch (err) {
+    console.warn("[Seed] Failed to write event:", ev.title, err);
+    return false;
   }
 }
 
-// ─── Main export ─────────────────────────────────────────────────────────
+// ─── Auto-seed: runs once per session when the DB is empty ────────────────
 export async function seedEventsIfEmpty(existingCount: number): Promise<void> {
-  if (existingCount > 0) return;
+  if (existingCount > 0) {
+    console.log("[Seed] Events exist (" + existingCount + ") — skipping auto-seed.");
+    return;
+  }
 
-  // Prevent double-seeding within the same session
-  if (sessionStorage.getItem("pp_seeding")) return;
+  // Guard: only run once per browser session
+  if (sessionStorage.getItem("pp_seeding")) {
+    console.log("[Seed] Already ran this session — skipping.");
+    return;
+  }
   sessionStorage.setItem("pp_seeding", "1");
 
-  console.info("[Seed] Starting seed: 30 users + " + EVENTS.length + " events…");
+  console.info(`[Seed] Starting auto-seed: ${DUMMY_USERS.length} users + ${EVENTS.length} events…`);
 
-  // 1. Create dummy user documents (enables friend search immediately)
-  await seedDummyUsers();
-  console.info("[Seed] Dummy users created.");
+  const users = await seedDummyUsers();
+  console.info(`[Seed] Users: ${users}/${DUMMY_USERS.length} written.`);
 
-  // 2. Create all events with going/interested pre-populated
   let seeded = 0;
   for (const ev of EVENTS) {
-    try {
-      await addDoc(collection(db, "events"), {
-        title: ev.title,
-        description: ev.description,
-        date: ev.date,
-        time: ev.time,
-        category: ev.category,
-        location: ev.location,
-        maxAttendees: ev.maxAttendees ?? null,
-        going: ev.going,
-        interested: ev.interested,
-        cantGo: [],
-        bannedUsers: [],
-        checkedIn: [],
-        creatorId: "system",
-        creatorName: "PartyPulse",
-        imageUrl: "",
-        createdAt: serverTimestamp(),
-      });
-      seeded++;
-      // Small delay to avoid Firestore write limits
-      await new Promise((r) => setTimeout(r, 60));
-    } catch (err) {
-      console.warn("[Seed] Failed to seed event:", ev.title, err);
-    }
+    if (await writeEvent(ev)) seeded++;
+    await new Promise((r) => setTimeout(r, 60));
   }
-  console.info(`[Seed] Done! ${seeded}/${EVENTS.length} events seeded.`);
+
+  console.info(`[Seed] Auto-seed complete: ${seeded}/${EVENTS.length} events written.`);
+}
+
+// ─── Force-seed: called from the debug "Seed Data" button ─────────────────
+// Always runs the full seed regardless of existing count.
+// Users are idempotent (merge:true). Events are only written when the
+// collection is empty — if events already exist, only dummy users are created.
+export async function seedAllData(): Promise<{ users: number; events: number }> {
+  // Always re-seed users (idempotent — uses merge:true)
+  console.info("[Seed] Force-seed: writing dummy users…");
+  const users = await seedDummyUsers();
+  console.info(`[Seed] Users done: ${users}/${DUMMY_USERS.length}`);
+
+  // Only write events if the collection is genuinely empty
+  const snap = await getCountFromServer(collection(db, "events"));
+  const eventCount = snap.data().count;
+
+  if (eventCount > 0) {
+    console.info(`[Seed] ${eventCount} events already exist — skipping event write.`);
+    return { users, events: 0 };
+  }
+
+  // Clear session lock so writeEvent calls go through
+  sessionStorage.removeItem("pp_seeding");
+
+  console.info(`[Seed] Writing ${EVENTS.length} events…`);
+  let seeded = 0;
+  for (const ev of EVENTS) {
+    if (await writeEvent(ev)) seeded++;
+    await new Promise((r) => setTimeout(r, 60));
+  }
+
+  console.info(`[Seed] Force-seed complete: ${seeded}/${EVENTS.length} events written.`);
+  return { users, events: seeded };
 }

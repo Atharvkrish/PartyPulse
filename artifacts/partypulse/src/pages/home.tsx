@@ -8,7 +8,8 @@ import {
   DEFAULT_FILTERS, FilterState, applyFilters, countActiveFilters, haversineKm, CATEGORY_META,
 } from "@/lib/eventFilters";
 import { fetchTicketmasterForCities, TM_PRELOAD_CITIES } from "@/lib/ticketmaster";
-import { seedEventsIfEmpty } from "@/lib/seedEvents";
+import { seedEventsIfEmpty, seedAllData } from "@/lib/seedEvents";
+import { useToast } from "@/hooks/use-toast";
 import { subscribeOwnActivity, Activity } from "@/lib/firestoreActivity";
 import EventFilterSheet from "@/components/EventFilterSheet";
 import PwaInstallBanner from "@/components/PwaInstallBanner";
@@ -111,7 +112,13 @@ export default function Home() {
   const [flyTarget, setFlyTarget] = useState<{ lat: number; lng: number } | null>(null);
   const [tmLoading, setTmLoading] = useState(false);
   const [seeded, setSeeded] = useState(false);
+  const [seedingState, setSeedingState] = useState<"idle" | "running" | "done" | "error">("idle");
   const mapRef = useRef<L.Map | null>(null);
+  // Ref so the seeding timeout always reads the *current* events count, not the stale closure value
+  const eventsLengthRef = useRef(0);
+  eventsLengthRef.current = events.length;
+
+  const { toast } = useToast();
 
   // Notifications
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -131,10 +138,10 @@ export default function Home() {
     return subscribeOwnActivity(user.uid, setActivities);
   }, [user]);
 
-  // Ticketmaster preload
+  // Ticketmaster preload — calls the /api/ticketmaster server-side proxy (key never in browser)
+  // In Replit dev the proxy isn't available and fails gracefully (returns []).
+  // On Vercel production, set TICKETMASTER_API_KEY in project environment variables.
   useEffect(() => {
-    const apiKey = import.meta.env.VITE_TICKETMASTER_API_KEY;
-    if (!apiKey) return;
     setTmLoading(true);
     fetchTicketmasterForCities(TM_PRELOAD_CITIES, 20)
       .then(setTmEvents)
@@ -142,16 +149,26 @@ export default function Home() {
       .finally(() => setTmLoading(false));
   }, []);
 
-  // Seed 60+ events + dummy users when Firestore is empty.
-  // Waits 3 s for the real-time subscription to settle before checking the count.
+  // Auto-seed 62 events + 30 dummy users when Firestore is empty.
+  // Waits 4 s for the Firestore real-time subscription to settle, then reads
+  // the CURRENT events count via a ref (avoids stale-closure bug).
   useEffect(() => {
     if (!user || seeded) return;
     const timer = setTimeout(() => {
+      const count = eventsLengthRef.current; // always current, not stale closure
+      console.log("[Seed] Checking if seed needed… Events count:", count);
       setSeeded(true);
-      seedEventsIfEmpty(events.length).catch(console.error);
-    }, 3000);
+      if (count > 0) {
+        console.log("[Seed] Events already exist — skipping auto-seed.");
+        return;
+      }
+      console.log("[Seed] No events found. Seeding started…");
+      seedEventsIfEmpty(count)
+        .then(() => console.log("[Seed] Auto-seed completed successfully."))
+        .catch((err) => console.error("[Seed] Auto-seed failed:", err));
+    }, 4000);
     return () => clearTimeout(timer);
-  }, [user]); // only re-run when user changes, not on every events update
+  }, [user]); // depends only on user — eventsLengthRef is a ref, not state
 
   // Geolocation
   useEffect(() => {
@@ -231,6 +248,29 @@ export default function Home() {
   function handleOpenNotifications() {
     setNotifOpen(true);
     localStorage.setItem("pp_notif_seen", String(Date.now()));
+  }
+
+  async function handleForceSeed() {
+    if (!user) {
+      toast({ title: "Not logged in", description: "Sign in first, then tap Seed Data.", variant: "destructive" });
+      return;
+    }
+    setSeedingState("running");
+    console.log("[Seed] Manual seed triggered by:", user.uid);
+    try {
+      const result = await seedAllData();
+      const desc = result.events > 0
+        ? `${result.events} events + ${result.users} dummy users written.`
+        : `${result.users} dummy users refreshed (events already exist).`;
+      console.log("[Seed] Manual seed done:", desc);
+      toast({ title: "✅ Seed complete!", description: desc });
+      setSeedingState("done");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("[Seed] Manual seed failed:", err);
+      toast({ title: "❌ Seed failed", description: msg, variant: "destructive" });
+      setSeedingState("error");
+    }
   }
 
   return (
@@ -404,6 +444,22 @@ export default function Home() {
         <button data-testid="button-create-event-fab" onClick={() => setLocation("/events/new")}
           className="absolute bottom-24 right-4 z-[999] bg-primary text-primary-foreground rounded-full px-5 py-3 font-bold text-sm shadow-lg hover:opacity-90 transition-opacity">
           + Create
+        </button>
+
+        {/* ── Debug: Seed Data button ─────────────────────────────────────────
+            Writes 62 events + 30 dummy users to Firestore.
+            Safe to tap multiple times — events are only written when empty;
+            dummy users use merge:true so they're always idempotent.
+            Remove this button once seeding is confirmed working in production. */}
+        <button
+          onClick={handleForceSeed}
+          disabled={seedingState === "running"}
+          title="Write 62 demo events + 30 dummy users to Firestore"
+          className="absolute bottom-36 right-4 z-[999] bg-emerald-600 text-white rounded-full px-4 py-2 text-xs font-bold shadow-lg hover:opacity-90 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-1.5">
+          {seedingState === "running" && (
+            <span className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin flex-shrink-0" />
+          )}
+          {seedingState === "running" ? "Seeding…" : seedingState === "done" ? "✅ Seeded!" : "🌱 Seed Data"}
         </button>
 
         {/* ── Events slide-up panel ── */}
