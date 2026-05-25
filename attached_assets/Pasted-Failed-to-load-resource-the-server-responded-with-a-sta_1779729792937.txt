@@ -1,0 +1,29 @@
+Failed to load resource: the server responded with a status of 401 ()
+(index):1 Manifest fetch from https://partypulse-qamdfc0xi-atharvkrishs-projects.vercel.app/manifest.webmanifest failed, code 401
+manifest.webmanifest:1  Failed to load resource: the server responded with a status of 401 ()
+/onboarding:1 Manifest fetch from https://partypulse-qamdfc0xi-atharvkrishs-projects.vercel.app/manifest.webmanifest failed, code 401
+identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=AIzaSyDcW4RUEAiZlrfVTlM8XLeSY_Ncj5dchsM:1  Failed to load resource: the server responded with a status of 400 ()
+index-CynWiOO4.js:39 [Ticketmaster] Proxy request
+index-CynWiOO4.js:39 URL: /api/ticketmaster?latlong=53.3498%2C-6.2603&radius=12&size=50
+index-CynWiOO4.js:39 [Ticketmaster] Proxy request
+index-CynWiOO4.js:39 URL: /api/ticketmaster?latlong=51.8985%2C-8.4756&radius=12&size=50
+index-CynWiOO4.js:39 [Ticketmaster] Proxy request
+index-CynWiOO4.js:39 URL: /api/ticketmaster?latlong=53.2707%2C-9.0568&radius=12&size=50
+index-CynWiOO4.js:39 [Ticketmaster] Proxy request
+index-CynWiOO4.js:39 URL: /api/ticketmaster?latlong=52.6638%2C-8.6267&radius=12&size=50
+index-CynWiOO4.js:39 [Ticketmaster] Proxy request
+index-CynWiOO4.js:39 URL: /api/ticketmaster?latlong=19.076%2C72.8777&radius=12&size=50
+index-CynWiOO4.js:39 [Ticketmaster] Proxy request
+index-CynWiOO4.js:39 URL: /api/ticketmaster?latlong=28.6139%2C77.209&radius=12&size=50
+index-CynWiOO4.js:39 [Ticketmaster] Proxy request
+index-CynWiOO4.js:39 URL: /api/ticketmaster?latlong=22.7196%2C75.8577&radius=12&size=50
+7index-CynWiOO4.js:39 Status: 200 
+7index-CynWiOO4.js:39 [Ticketmaster] Unexpected error: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+k9 @ index-CynWiOO4.js:39
+index-CynWiOO4.js:39 [Ticketmaster] Total unique events loaded: 0
+index-CynWiOO4.js:39 FCM: VITE_FIREBASE_VAPID_KEY is not set. Push notifications disabled.
+$B @ index-CynWiOO4.js:39
+index-CynWiOO4.js:41 [Seed] Checking if seed needed… Events count: 77
+index-CynWiOO4.js:41 [Seed] Events already exist — skipping auto-seed.
+
+manifest.webmanifest:1  Failed to load resource: the server responded with a status of 401 ()
