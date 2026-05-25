@@ -138,16 +138,17 @@ export default function Home() {
     return subscribeOwnActivity(user.uid, setActivities);
   }, [user]);
 
-  // Ticketmaster preload — calls the /api/ticketmaster server-side proxy (key never in browser)
-  // In Replit dev the proxy isn't available and fails gracefully (returns []).
-  // On Vercel production, set TICKETMASTER_API_KEY in project environment variables.
-  useEffect(() => {
-    setTmLoading(true);
-    fetchTicketmasterForCities(TM_PRELOAD_CITIES, 20)
-      .then(setTmEvents)
-      .catch(() => { })
-      .finally(() => setTmLoading(false));
-  }, []);
+  // Ticketmaster preload — TEMPORARILY DISABLED while verifying proxy deployment.
+  // To re-enable: uncomment the useEffect block below and remove the setTmLoading(false) line.
+  // Requires TICKETMASTER_API_KEY set in Vercel → Settings → Environment Variables.
+  useEffect(() => { setTmLoading(false); }, []);
+  // useEffect(() => {
+  //   setTmLoading(true);
+  //   fetchTicketmasterForCities(TM_PRELOAD_CITIES, 20)
+  //     .then(setTmEvents)
+  //     .catch(() => { })
+  //     .finally(() => setTmLoading(false));
+  // }, []);
 
   // Auto-seed 62 events + 30 dummy users when Firestore is empty.
   // Waits 4 s for the Firestore real-time subscription to settle, then reads
